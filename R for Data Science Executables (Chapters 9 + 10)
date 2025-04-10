@@ -1,0 +1,645 @@
+#
+#
+# CHAPTER 9 ---------------------------------------------------------------
+#
+#
+
+# 9.1 PreReqs -----------------------------------------------------------------
+library(tidyverse)
+
+# 9.2 Aesthetic Mappings --------------------------------------------------
+mpg
+#> # A tibble: 234 × 11
+#>   manufacturer model displ  year   cyl trans      drv     cty   hwy fl   
+#>   <chr>        <chr> <dbl> <int> <int> <chr>      <chr> <int> <int> <chr>
+#> 1 audi         a4      1.8  1999     4 auto(l5)   f        18    29 p    
+#> 2 audi         a4      1.8  1999     4 manual(m5) f        21    29 p    
+#> 3 audi         a4      2    2008     4 manual(m6) f        20    31 p    
+#> 4 audi         a4      2    2008     4 auto(av)   f        21    30 p    
+#> 5 audi         a4      2.8  1999     6 auto(l5)   f        16    26 p    
+#> 6 audi         a4      2.8  1999     6 manual(m5) f        18    26 p    
+#> # ℹ 228 more rows
+#> # ℹ 1 more variable: class <chr>
+
+# Left
+ggplot(mpg, aes(x = displ, y = hwy, color = class)) +
+  geom_point()
+
+# Right
+ggplot(mpg, aes(x = displ, y = hwy, shape = class)) +
+  geom_point()
+#> Warning: The shape palette can deal with a maximum of 6 discrete values because more
+#> than 6 becomes difficult to discriminate
+#> ℹ you have requested 7 values. Consider specifying shapes manually if you
+#>   need that many have them.
+#> Warning: Removed 62 rows containing missing values or values outside the scale range
+#> (`geom_point()`).
+
+# Left
+ggplot(mpg, aes(x = displ, y = hwy, size = class)) +
+  geom_point()
+#> Warning: Using size for a discrete variable is not advised.
+
+# Right
+ggplot(mpg, aes(x = displ, y = hwy, alpha = class)) +
+  geom_point()
+#> Warning: Using alpha for a discrete variable is not advised.
+
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point(color = "blue")
+
+# 9.3 Geometric Objects ---------------------------------------------------
+# Left
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point()
+
+# Right
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_smooth()
+#> `geom_smooth()` using method = 'loess' and formula = 'y ~ x'
+
+# Left
+ggplot(mpg, aes(x = displ, y = hwy, shape = drv)) + 
+  geom_smooth()
+
+# Right
+ggplot(mpg, aes(x = displ, y = hwy, linetype = drv)) + 
+  geom_smooth()
+
+ggplot(mpg, aes(x = displ, y = hwy, color = drv)) + 
+  geom_point() +
+  geom_smooth(aes(linetype = drv))
+
+# Left
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth()
+
+# Middle
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth(aes(group = drv))
+
+# Right
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth(aes(color = drv), show.legend = FALSE)
+
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point(aes(color = class)) + 
+  geom_smooth()
+
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  geom_point(
+    data = mpg |> filter(class == "2seater"), 
+    color = "red"
+  ) +
+  geom_point(
+    data = mpg |> filter(class == "2seater"), 
+    shape = "circle open", size = 3, color = "red"
+  )
+
+# Left
+ggplot(mpg, aes(x = hwy)) +
+  geom_histogram(binwidth = 2)
+
+# Middle
+ggplot(mpg, aes(x = hwy)) +
+  geom_density()
+
+# Right
+ggplot(mpg, aes(x = hwy)) +
+  geom_boxplot()
+
+library(ggridges)
+ggplot(mpg, aes(x = hwy, y = drv, fill = drv, color = drv)) +
+  geom_density_ridges(alpha = 0.5, show.legend = FALSE)
+#> Picking joint bandwidth of 1.28
+
+# 9.4 Facets --------------------------------------------------------------
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_wrap(~cyl)
+
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_grid(drv ~ cyl)
+
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_grid(drv ~ cyl, scales = "free")
+
+# 9.5 Statistical Transformations -----------------------------------------
+ggplot(diamonds, aes(x = cut)) + 
+  geom_bar()
+
+diamonds |>
+  count(cut) |>
+  ggplot(aes(x = cut, y = n)) +
+  geom_bar(stat = "identity")
+
+ggplot(diamonds, aes(x = cut, y = after_stat(prop), group = 1)) + 
+  geom_bar()
+
+ggplot(diamonds) + 
+  stat_summary(
+    aes(x = cut, y = depth),
+    fun.min = min,
+    fun.max = max,
+    fun = median
+  )
+
+# 9.6 Position Adjustments ------------------------------------------------
+# Left
+ggplot(mpg, aes(x = drv, color = drv)) + 
+  geom_bar()
+
+# Right
+ggplot(mpg, aes(x = drv, fill = drv)) + 
+  geom_bar()
+
+ggplot(mpg, aes(x = drv, fill = class)) + 
+  geom_bar()
+
+# Left
+ggplot(mpg, aes(x = drv, fill = class)) + 
+  geom_bar(alpha = 1/5, position = "identity")
+
+# Right
+ggplot(mpg, aes(x = drv, color = class)) + 
+  geom_bar(fill = NA, position = "identity")
+
+# Left
+ggplot(mpg, aes(x = drv, fill = class)) + 
+  geom_bar(position = "fill")
+
+# Right
+ggplot(mpg, aes(x = drv, fill = class)) + 
+  geom_bar(position = "dodge")
+
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point(position = "jitter")
+
+# 9.7 Coordinate Systems --------------------------------------------------
+nz <- map_data("nz")
+
+ggplot(nz, aes(x = long, y = lat, group = group)) +
+  geom_polygon(fill = "white", color = "black")
+
+ggplot(nz, aes(x = long, y = lat, group = group)) +
+  geom_polygon(fill = "white", color = "black") +
+  coord_quickmap()
+
+bar <- ggplot(data = diamonds) + 
+  geom_bar(
+    mapping = aes(x = clarity, fill = clarity), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1)
+
+bar + coord_flip()
+bar + coord_polar()
+
+#
+#
+# CHAPTER 10 --------------------------------------------------------------
+#
+#
+
+# 10.1 PreReqs ------------------------------------------------------------
+library(tidyverse)
+
+# 10.3 Variation ----------------------------------------------------------
+ggplot(diamonds, aes(x = carat)) +
+  geom_histogram(binwidth = 0.5)
+
+smaller <- diamonds |> 
+  filter(carat < 3)
+
+ggplot(smaller, aes(x = carat)) +
+  geom_histogram(binwidth = 0.01)
+
+ggplot(diamonds, aes(x = y)) + 
+  geom_histogram(binwidth = 0.5)
+
+ggplot(diamonds, aes(x = y)) + 
+  geom_histogram(binwidth = 0.5) +
+  coord_cartesian(ylim = c(0, 50))
+
+unusual <- diamonds |> 
+  filter(y < 3 | y > 20) |> 
+  select(price, x, y, z) |>
+  arrange(y)
+unusual
+#> # A tibble: 9 × 4
+#>   price     x     y     z
+#>   <int> <dbl> <dbl> <dbl>
+#> 1  5139  0      0    0   
+#> 2  6381  0      0    0   
+#> 3 12800  0      0    0   
+#> 4 15686  0      0    0   
+#> 5 18034  0      0    0   
+#> 6  2130  0      0    0   
+#> 7  2130  0      0    0   
+#> 8  2075  5.15  31.8  5.12
+#> 9 12210  8.09  58.9  8.06
+
+# 10.4 Unusual Values -----------------------------------------------------
+diamonds2 <- diamonds |> 
+  filter(between(y, 3, 20))
+
+diamonds2 <- diamonds |> 
+  mutate(y = if_else(y < 3 | y > 20, NA, y))
+
+ggplot(diamonds2, aes(x = x, y = y)) + 
+  geom_point()
+#> Warning: Removed 9 rows containing missing values or values outside the scale range
+#> (`geom_point()`).
+
+ggplot(diamonds2, aes(x = x, y = y)) + 
+  geom_point(na.rm = TRUE)
+
+nycflights13::flights |> 
+  mutate(
+    cancelled = is.na(dep_time),
+    sched_hour = sched_dep_time %/% 100,
+    sched_min = sched_dep_time %% 100,
+    sched_dep_time = sched_hour + (sched_min / 60)
+  ) |> 
+  ggplot(aes(x = sched_dep_time)) + 
+  geom_freqpoly(aes(color = cancelled), binwidth = 1/4)
+
+# 10.5 Covariation --------------------------------------------------------
+ggplot(diamonds, aes(x = price)) + 
+  geom_freqpoly(aes(color = cut), binwidth = 500, linewidth = 0.75)
+
+ggplot(diamonds, aes(x = cut, y = price)) +
+  geom_boxplot()
+
+ggplot(mpg, aes(x = class, y = hwy)) +
+  geom_boxplot()
+
+ggplot(mpg, aes(x = fct_reorder(class, hwy, median), y = hwy)) +
+  geom_boxplot()
+
+ggplot(mpg, aes(x = hwy, y = fct_reorder(class, hwy, median))) +
+  geom_boxplot()
+
+ggplot(diamonds, aes(x = cut, y = color)) +
+  geom_count()
+
+diamonds |> 
+  count(color, cut)
+#> # A tibble: 35 × 3
+#>   color cut           n
+#>   <ord> <ord>     <int>
+#> 1 D     Fair        163
+#> 2 D     Good        662
+#> 3 D     Very Good  1513
+#> 4 D     Premium    1603
+#> 5 D     Ideal      2834
+#> 6 E     Fair        224
+#> # ℹ 29 more rows
+
+diamonds |> 
+  count(color, cut) |>  
+  ggplot(aes(x = color, y = cut)) +
+  geom_tile(aes(fill = n))
+
+ggplot(smaller, aes(x = carat, y = price)) +
+  geom_point()
+
+ggplot(smaller, aes(x = carat, y = price)) + 
+  geom_point(alpha = 1 / 100)
+
+ggplot(smaller, aes(x = carat, y = price)) +
+  geom_bin2d()
+
+# install.packages("hexbin")
+ggplot(smaller, aes(x = carat, y = price)) +
+  geom_hex()
+
+ggplot(smaller, aes(x = carat, y = price)) + 
+  geom_boxplot(aes(group = cut_width(carat, 0.1)))
+
+# 10.6 Patterns & Models --------------------------------------------------
+library(tidymodels)
+
+diamonds <- diamonds |>
+  mutate(
+    log_price = log(price),
+    log_carat = log(carat)
+  )
+
+diamonds_fit <- linear_reg() |>
+  fit(log_price ~ log_carat, data = diamonds)
+
+diamonds_aug <- augment(diamonds_fit, new_data = diamonds) |>
+  mutate(.resid = exp(.resid))
+
+ggplot(diamonds_aug, aes(x = carat, y = .resid)) + 
+  geom_point()
+
+ggplot(diamonds_aug, aes(x = cut, y = .resid)) + 
+  geom_boxplot()
+
+# 9.2.1 Exercises ---------------------------------------------------------
+
+# 1
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point(shape = 24, fill = "pink", color = "black", size = 3)
+
+# 2 -- runnign the code to see the issue
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy, color = "blue"))
+
+# 3
+?geom_point  # Opening the hint for more details
+
+# 4
+ggplot(mpg, aes(x = displ, y = hwy, color = displ < 5)) + 
+  geom_point()
+
+# 9.3.1 -------------------------------------------------------------------
+
+# 1 - Line chart
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_line()
+# 1 - Boxplot
+ggplot(mpg, aes(x = drv, y = hwy)) +
+  geom_boxplot()
+# 1 - Histo
+ggplot(mpg, aes(x = hwy)) +
+  geom_histogram(binwidth = 2)
+# 1 - Area Chart
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_area()
+
+# 2
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth(aes(color = drv), show.legend = FALSE)
+
+# 3
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth(se = FALSE)
+
+# 4 - I tried to recreate the last image...
+ggplot(mpg, aes(x = displ, y = hwy, color = drv)) +
+  geom_point()
+
+# 9.4.1 -------------------------------------------------------------------
+
+# 1
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_wrap(~ displ)
+
+# 2
+ggplot(mpg, aes(x = drv, y = cyl)) + 
+  geom_point()
+
+# 3 - first plot
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_grid(drv ~ .)
+# 3 - second plot
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_grid(. ~ cyl)
+
+# 4
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_wrap(~ cyl, nrow = 2)
+
+# 5
+?facet_wrap
+
+# 6 
+ggplot(mpg, aes(x = displ)) + 
+  geom_histogram() + 
+  facet_grid(drv ~ .)
+
+# 7
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_wrap(~ drv)
+
+# 9.5.1 -------------------------------------------------------------------
+
+# 1
+ggplot(diamonds, aes(x = cut, y = depth)) +
+  stat_summary(fun.min = min, fun.max = max, fun = median)
+# 1 - rewritten
+ggplot(diamonds, aes(x = cut, y = depth)) +
+  geom_pointrange(stat = "summary", fun.min = min, fun.max = max, fun = median)
+
+# 2 - geom_bar() example
+ggplot(diamonds, aes(x = cut)) + 
+  geom_bar()
+# 2 - geom_col() example
+diamonds_summary <- diamonds |> count(cut)
+ggplot(diamonds_summary, aes(x = cut, y = n)) + 
+  geom_col()
+
+# 3 - done in report
+
+# 4
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_smooth(method = "lm", se = FALSE)
+
+# 5 - given
+ggplot(diamonds, aes(x = cut, y = after_stat(prop))) + 
+  geom_bar()
+ggplot(diamonds, aes(x = cut, fill = color, y = after_stat(prop))) + 
+  geom_bar()
+# 5 - my example
+ggplot(diamonds, aes(x = cut, y = after_stat(prop), group = 1)) + 
+  geom_bar()
+
+# 9.6.1 -------------------------------------------------------------------
+
+# 1 - Improved code
+ggplot(mpg, aes(x = cty, y = hwy)) + 
+  geom_jitter()
+
+# 2
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point()
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(position = "identity")
+
+# 3 - done in report
+
+# 4 - example
+ggplot(mpg, aes(x = cty, y = hwy)) + 
+  geom_count()
+
+# 5 - example
+ggplot(mpg, aes(x = class, y = hwy, fill = class)) + 
+  geom_boxplot()
+
+# 9.7.1 -------------------------------------------------------------------
+
+# 1
+ggplot(mpg, aes(x = "", fill = class)) + 
+  geom_bar() + 
+  coord_polar(theta = "y")
+
+# 2 - done in report
+
+# 3
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) +
+  geom_point() + 
+  geom_abline() +
+  coord_fixed()
+
+# 10.3.3 ------------------------------------------------------------------
+
+# 1 - Done in report
+
+# 2 - example
+ggplot(diamonds, aes(x = price)) + 
+  geom_histogram(binwidth = 425)
+
+# 3 - done in report
+
+# 4 - example code
+ggplot(diamonds, aes(x = price)) + 
+  geom_histogram(binwidth = 500) + 
+  coord_cartesian(xlim = c(1000, 5000))
+
+# 10.4.1 ------------------------------------------------------------------
+
+# 1 - Done in report
+
+# 2 - example
+mean(c(4, 5, 6, NA), na.rm = TRUE)  
+sum(c(6, 12, NA, 24), na.rm = TRUE)
+
+# 3
+nycflights13::flights |> 
+  mutate(
+    cancelled = is.na(dep_time),  # Flights with NA departure times are canceled
+    sched_hour = sched_dep_time %/% 100,
+    sched_min = sched_dep_time %% 100,
+    sched_dep_time = sched_hour + (sched_min / 60)  # Convert to hours
+  ) |> 
+  ggplot(aes(x = sched_dep_time, color = cancelled)) + 
+  geom_freqpoly(binwidth = 1) +
+  facet_wrap(~cancelled, scales = "free_y")
+
+# 10.5.1.1 ----------------------------------------------------------------
+
+# 1
+nycflights13::flights |> 
+  mutate(
+    cancelled = is.na(dep_time),
+    sched_hour = sched_dep_time %/% 100,
+    sched_min = sched_dep_time %% 100,
+    sched_dep_time = sched_hour + (sched_min / 60)
+  ) |> 
+  ggplot(aes(x = sched_dep_time)) + 
+  geom_freqpoly(aes(color = cancelled), binwidth = 1/4)
+
+# 2 - explained in report.
+
+# 3
+ggplot(diamonds, aes(x = cut, y = price)) + 
+  geom_boxplot() + 
+  coord_flip()
+
+# 4
+install.packages("lvplot")
+library(lvplot)
+ggplot(diamonds, aes(x = cut, y = price)) + 
+  geom_lv()
+
+# 5 - violin
+ggplot(diamonds, aes(x = cut, y = price)) + 
+  geom_violin()
+# 5 - faceted histo
+ggplot(diamonds, aes(x = price)) + 
+  geom_histogram(bins = 30) + 
+  facet_wrap(~cut)
+# 5 - frequency polygon
+ggplot(diamonds, aes(x = price, color = cut)) + 
+  geom_freqpoly(binwidth = 500)
+# 5 - density plot
+ggplot(diamonds, aes(x = price, color = cut)) + 
+  geom_density()
+
+# 6
+install.packages("ggbeeswarm")
+library(ggbeeswarm)
+
+#  10.5.2.1 ---------------------------------------------------------------
+
+# 1
+library(ggplot2)
+ggplot(diamonds, aes(x = color, fill = cut)) +
+  geom_bar(position = "fill") + # position="fill" normalizes counts to proportions
+  labs(title = "Distribution of Cut within Color")
+
+# 2 - example
+ggplot(diamonds, aes(x = color, fill = cut)) +
+  geom_bar(position = "fill") +
+  labs(title = "Distribution of Cut within Color", y = "Proportion") 
+
+# 2 - to calc the counts
+diamonds %>%
+  count(color, cut)
+
+# 3
+library(nycflights13)
+library(dplyr)
+library(ggplot2)
+flights %>%
+  group_by(dest, month) %>%
+  summarise(avg_delay = mean(dep_delay, na.rm = TRUE)) %>%
+  ggplot(aes(x = dest, y = month, fill = avg_delay)) +
+  geom_tile() +
+  labs(title = "Average Flight Departure Delays by Destination and Month") +
+  scale_fill_gradient(low = "lightblue", high = "red") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# 10.5.3.1 ----------------------------------------------------------------
+
+# 1 - done in report
+
+# 2
+ggplot(diamonds, aes(x = price, y = carat)) + 
+  geom_boxplot() + 
+  labs(title = "Distribution of Carat, Partitioned by Price")
+
+# 3
+small_diamonds <- diamonds %>% filter(carat < 1)
+large_diamonds <- diamonds %>% filter(carat > 2)
+ggplot() + 
+  geom_density(data = small_diamonds, aes(x = price), fill = "blue", alpha = 0.5) + 
+  geom_density(data = large_diamonds, aes(x = price), fill = "red", alpha = 0.5) + 
+  labs(title = "Price Distribution of Small vs Large Diamonds", x = "Price", y = "Density")
+
+# 4
+ggplot(diamonds, aes(x = carat, y = price, color = cut)) + 
+  geom_point(alpha = 0.5) + 
+  facet_wrap(~cut) +
+  labs(title = "Combined Distribution of Cut, Carat, and Price")
+
+# 5 - given
+diamonds |> 
+  filter(x >= 4) |> 
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  coord_cartesian(xlim = c(4, 11), ylim = c(4, 11))
+
+# 5 - the better, binned plot
+diamonds %>%
+  filter(x >= 4) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  coord_cartesian(xlim = c(4, 11), ylim = c(4, 11)) +
+  labs(title = "Scatterplot of x vs y (Filtered for x >= 4)")
+
+# 6 
+ggplot(smaller, aes(x = carat, y = price)) + 
+  geom_boxplot(aes(group = cut_number(carat, 20)))
