@@ -1,0 +1,104 @@
+# Set Working Directory ---------------------------------------------------
+getwd()
+setwd("/Users/favournoya")
+
+# Install & Load Required Packages ----------------------------------------
+install.packages("tidyverse", dependencies = TRUE)
+install.packages("readxl", dependencies = TRUE)   
+library(tidyverse)
+library(readxl)
+
+# Load the Excel Data into R ----------------------------------------------
+data <- read_excel("/Users/favournoya/Documents/Whole Game Raw Data.xlsx")
+
+# Double Check & View the Data ---------------------------------------------------
+View(data)
+head(data)
+dim(data)
+colnames(data)
+
+# Check for Missing Values & Clean Data -----------------------------------
+colSums(is.na(data)) # Count Missing Values
+
+# Assign Placeholder for Missing Shipment IDs
+data$number[is.na(data$number)] <- -1 
+
+# Remove Invalid Shipments ($ = 0)
+data <- filter(data, `($)` > 0)
+
+# Remove Duplicates
+data <- distinct(data)
+
+
+# Transform Data --------------------------------------------------------
+
+# Add a new column (Mutate) for cost per KG-KM
+data <- mutate(data, cost_per_kgkm = `($)` / `KG-KM`)
+
+# Select Relevant Columns (Select)
+data <- select(data, carier, `($)`, days, `longest diagonal`, cost_per_kgkm)
+
+# Rename Columns for Clarity (Rename)
+data <- rename(data, 
+               Delivery_Cost = `($)`, 
+               Carrier_Name = carier, 
+               Delivery_Time = days)
+
+# Change the Order of Columns (Relocate)
+data <- relocate(data, Delivery_Cost, .after = Carrier_Name)
+data <- relocate(data, Delivery_Time, .before = `longest diagonal`)
+
+# Sort Data by Delivery Time (Arrange)
+data <- arrange(data, Delivery_Time)
+
+# Ensuring no duplicates remain  
+data <- distinct(data)
+
+
+#
+# Visualizations & Analyzations -------------------------------------------
+#
+
+# 1 - Are shorter Delivery Times actually more expensive?
+ggplot(data, aes(x = Delivery_Time, y = Delivery_Cost)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(title = "Delivery Time vs Shipment Cost")
+
+# 2 - How many shipments are completed by each Carrier?
+data %>%
+  count(Carrier_Name) %>%
+  ggplot(aes(x = Carrier_Name, y = n, fill = Carrier_Name)) +
+  geom_col() +
+  labs(title = "Number of Shipments by Carrier")
+
+# 3 - What is average cost per shipment from each Carrier?
+data %>%
+  group_by(Carrier_Name) %>%
+  summarize(Average_Cost = mean(Delivery_Cost, na.rm = TRUE)) %>%
+  ggplot(aes(x = Carrier_Name, y = Average_Cost, fill = Carrier_Name)) +
+  geom_col() +
+  labs(title = "Average Cost per Shipment by Carrier")
+
+# 4 - What is cost per KG-KM for all Carriers?
+data %>%
+  group_by(Carrier_Name) %>%
+  summarize(Total_Cost_per_KGKM = sum(cost_per_kgkm, na.rm = TRUE)) %>%
+  ggplot(aes(x = Carrier_Name, y = Total_Cost_per_KGKM, fill = Carrier_Name)) +
+  geom_col() +
+  labs(title = "Total Cost per KG-KM by Carrier")
+
+# 5 - What is the rank for each Carrier by Cost per KG-KM?
+carrier_rank <- data %>%
+  group_by(Carrier_Name) %>%
+  summarize(Total_Cost_per_KGKM = sum(cost_per_kgkm, na.rm = TRUE)) %>%
+  arrange(desc(Total_Cost_per_KGKM))
+ggplot(carrier_rank, aes(x = reorder(Carrier_Name, -Total_Cost_per_KGKM), y = Total_Cost_per_KGKM)) +
+  geom_col(fill = "darkblue") +
+  labs(title = "Carrier Ranking by Total Cost per KG-KM")
+
+# 6 - How does Longest Diagonal affect Cost?
+ggplot(data, aes(x = `longest diagonal`, y = Delivery_Cost)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(title = "Longest Diagonal vs Delivery Cost")
