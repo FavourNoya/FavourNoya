@@ -1,0 +1,199 @@
+# Set Working Directory ---------------------------------------------------
+getwd()
+setwd("/Users/favournoya/Documents")
+
+# Install & Load Required Packages ----------------------------------------
+install.packages(c("tidyverse", "lubridate", "readr", "readxl"))
+library(tidyverse)
+library(lubridate)
+library(readr)
+library(readxl)
+
+# Loading the Data
+video_data <- read_excel("Visualization_Project_Video_data.xlsx", sheet = 1) %>%
+  as.data.frame()
+file.exists("Visualization_Project_Video_data.xlsx")
+
+# Re-checking the View of Data
+View(video_data)
+colnames(video_data)
+
+# Converting data to Date format
+video_data <- video_data |>
+  mutate(trending_date = as.Date(trending_date, format ="%y.%d.%m"))
+View(video_data)
+
+# a - ensuring that each trending date counts only unique videos instead of duplicating entries
+# but as a line chart for diverse trend representation
+video_data %>%
+  distinct(video_id, trending_date, .keep_all = TRUE) %>%  
+  group_by(trending_date) %>%
+  summarize(unique_videos = n()) %>%  # Count unique videos per day
+  ggplot(aes(x = trending_date, y = unique_videos)) +
+  geom_line(color = "steelblue", size = 1) +  # Line chart for trends
+  geom_point(color = "darkblue", size = .5) +  # Add points for clarity
+  labs(title = "Unique Videos by Trending Date",
+       x = "Trending Date",
+       y = "Number of Unique Videos") +
+  theme_minimal()
+
+# b
+top_channel <- video_data %>%
+  count(channel_title) %>%
+  arrange(desc(n)) %>%
+  slice(1) %>%
+  pull(channel_title)
+video_data %>%
+  filter(channel_title == top_channel) %>%
+  count(trending_date) %>%
+  ggplot(aes(x = trending_date, y = n)) +
+  geom_line(color = "red", size = 1) +
+  labs(title = paste("Trending Videos for", top_channel), x = "Trending Date", y = "Number of Videos") +
+  theme_minimal()
+
+# c
+video_data %>%
+  mutate(likes_to_views = likes / views) %>%
+  group_by(channel_title) %>%
+  summarize(average_ratio = mean(likes_to_views, na.rm = TRUE)) %>%
+  arrange(desc(average_ratio)) %>%
+  slice_head(n = 10) %>%
+  ggplot(aes(x = reorder(channel_title, average_ratio), y = average_ratio)) +
+  geom_col(fill = "darkgreen") +
+  coord_flip() +
+  labs(title = "Top 10 Channels by Likes-to-Views Ratio",
+       x = "Channel",
+       y = "Likes / Views") +
+  theme_minimal()
+
+# d
+video_data %>%
+  mutate(likes_dislikes_ratio = likes / (likes + dislikes)) %>%
+  arrange(desc(likes_dislikes_ratio)) %>%
+  slice_head(n = 10) %>%
+  ggplot(aes(x = reorder(title, likes_dislikes_ratio), y = likes_dislikes_ratio)) +
+  geom_col(fill = "purple") +
+  coord_flip() +
+  labs(title = "Top 10 Videos by Likes/(Likes + Dislikes) Ratio", x = "Video Title", y = "Ratio") +
+  theme_minimal()
+
+# e 
+video_data %>%
+  filter(ratings_disabled == TRUE) %>%
+  count(channel_title) %>%
+  arrange(desc(n)) %>%
+  slice_head(n = 10) %>%
+  ggplot(aes(x = reorder(channel_title, n), y = n)) +
+  geom_col(fill = "orange") +
+  coord_flip() +
+  labs(title = "Channels with Most Videos Having Ratings Disabled",
+       x = "Channel",
+       y = "Count of Videos") +
+  theme_minimal()
+
+# f
+video_data %>%
+  ggplot(aes(x = as.factor(comments_disabled), y = likes, fill = comments_disabled)) +
+  geom_boxplot(outlier.shape = 16, outlier.size = 1) +  # With the whiskers for variability
+  scale_y_log10() + 
+  labs(title = "Distribution of Likes for Videos With and Without Comments",
+       x = "Comments Disabled (0 = No, 1 = Yes)",
+       y = "Likes (Log Scale)") +
+  theme_minimal()
+
+# g
+video_data %>%
+  mutate(has_funny_tag = ifelse(str_detect(tags, "funny"), "Funny", "Not Funny")) %>%
+  group_by(has_funny_tag) %>%
+  summarize(total_likes = sum(likes, na.rm = TRUE)) %>%
+  ggplot(aes(x = has_funny_tag, y = total_likes, fill = has_funny_tag)) +
+  geom_col() +
+  labs(title = "Total Likes: Videos with 'Funny' Tag vs Without",
+       x = "Tag Presence",
+       y = "Total Likes") +
+  theme_minimal()
+
+# h - Part 1: Rank Channels by Likes-to-Views Ratio
+video_data %>%
+  mutate(likes_to_views = likes / views) %>%
+  group_by(channel_title) %>%
+  summarize(avg_ratio = mean(likes_to_views, na.rm = TRUE)) %>%
+  arrange(desc(avg_ratio)) %>%
+  slice_head(n = 10) %>%
+  ggplot(aes(x = reorder(channel_title, avg_ratio), y = avg_ratio)) +
+  geom_col(fill = "green") +
+  coord_flip() +
+  labs(title = "Top 10 Channels by Likes-to-Views Ratio",
+       x = "Channel",
+       y = "Likes / Views") +
+  theme_minimal()
+
+# h - Part 2: Rank Channels by Dislikes-to-views ratio
+video_data %>%
+  mutate(dislikes_to_views = dislikes / views) %>%
+  group_by(channel_title) %>%
+  summarize(avg_ratio = mean(dislikes_to_views, na.rm = TRUE)) %>%
+  arrange(desc(avg_ratio)) %>%
+  slice_head(n = 10) %>%
+  ggplot(aes(x = reorder(channel_title, avg_ratio), y = avg_ratio)) +
+  geom_col(fill = "red") +
+  coord_flip() +
+  labs(title = "Top 10 Channels by Dislikes-to-Views Ratio",
+       x = "Channel",
+       y = "Dislikes / Views") +
+  theme_minimal()
+
+# h - Part 3: Rank Channels by (Likes - Dislikes) / Views
+video_data %>%
+  mutate(net_engagement = (likes - dislikes) / views) %>%
+  group_by(channel_title) %>%
+  summarize(avg_net_engagement = mean(net_engagement, na.rm = TRUE)) %>%
+  arrange(desc(avg_net_engagement)) %>%
+  slice_head(n = 10) %>%
+  ggplot(aes(x = reorder(channel_title, avg_net_engagement), y = avg_net_engagement)) +
+  geom_col(fill = "purple") +
+  coord_flip() +
+  labs(title = "Top 10 Channels by (Likes - Dislikes) / Views",
+       x = "Channel",
+       y = "Engagement Score") +
+  theme_minimal()
+
+# ADDITIONAL Part of h where I simply combined all three metrics from the question to have
+# it viewed on a single plot
+ranked_data <- video_data %>%
+  mutate(
+    likes_to_views = likes / views,
+    dislikes_to_views = dislikes / views,
+    net_engagement = (likes - dislikes) / views
+  ) %>%
+  group_by(channel_title) %>%
+  summarize(
+    avg_likes_to_views = mean(likes_to_views, na.rm = TRUE),
+    avg_dislikes_to_views = mean(dislikes_to_views, na.rm = TRUE),
+    avg_net_engagement = mean(net_engagement, na.rm = TRUE)
+  ) %>%
+  pivot_longer(
+    cols = starts_with("avg_"),
+    names_to = "metric",
+    values_to = "value"
+  ) %>%
+  mutate(
+    metric = case_when(
+      metric == "avg_likes_to_views" ~ "Likes / Views",
+      metric == "avg_dislikes_to_views" ~ "Dislikes / Views",
+      metric == "avg_net_engagement" ~ "(Likes - Dislikes) / Views"
+    )
+  ) %>%
+  arrange(desc(value)) %>%
+  slice_head(n = 30)  # Top 10 per category (since reshaped)
+ggplot(ranked_data, aes(x = reorder(channel_title, -value), y = value, color = metric)) +
+  geom_point(size = 4, alpha = 0.7) +
+  coord_flip() +
+  scale_color_manual(values = c("green", "red", "purple")) +
+  labs(
+    title = "Top Ranked Channels by Engagement Ratios",
+    x = "Channel",
+    y = "Ratio",
+    color = "Metric"
+  ) +
+  theme_minimal()
