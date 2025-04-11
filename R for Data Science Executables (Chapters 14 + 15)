@@ -1,0 +1,1042 @@
+# CHAPTER 14 --------------------------------------------------------------
+library(tidyverse)
+library(babynames)
+
+string1 <- "This is a string"
+string2 <- 'If I want to include a "quote" inside a string, I use single quotes'
+
+double_quote <- "\"" # or '"'
+single_quote <- '\'' # or "'"
+
+backslash <- "\\"
+
+x <- c(single_quote, double_quote, backslash)
+x
+#> [1] "'"  "\"" "\\"
+str_view(x)
+#> [1] │ '
+#> [2] │ "
+#> [3] │ \
+
+tricky <- "double_quote <- \"\\\"\" # or '\"'
+single_quote <- '\\'' # or \"'\""
+str_view(tricky)
+#> [1] │ double_quote <- "\"" # or '"'
+#>     │ single_quote <- '\'' # or "'"
+
+tricky <- r"(double_quote <- "\"" # or '"'
+single_quote <- '\'' # or "'")"
+
+x <- c("one\ntwo", "one\ttwo", "\u00b5", "\U0001f604")
+x
+#> [1] "one\ntwo" "one\ttwo" "µ"        "😄"
+str_view(x)
+#> [1] │ one
+#>     │ two
+#> [2] │ one{\t}two
+#> [3] │ µ
+#> [4] │ 😄
+
+# 14.3
+str_c("x", "y")
+#> [1] "xy"
+str_c("x", "y", "z")
+#> [1] "xyz"
+str_c("Hello ", c("John", "Susan"))
+#> [1] "Hello John"  "Hello Susan"
+
+df <- tibble(name = c("Flora", "David", "Terra", NA))
+df |> mutate(greeting = str_c("Hi ", name, "!"))
+#> # A tibble: 4 × 2
+#>   name  greeting 
+#>   <chr> <chr>    
+#> 1 Flora Hi Flora!
+#> 2 David Hi David!
+#> 3 Terra Hi Terra!
+#> 4 <NA>  <NA>
+
+df |> 
+  mutate(
+    greeting1 = str_c("Hi ", coalesce(name, "you"), "!"),
+    greeting2 = coalesce(str_c("Hi ", name, "!"), "Hi!")
+  )
+#> # A tibble: 4 × 3
+#>   name  greeting1 greeting2
+#>   <chr> <chr>     <chr>    
+#> 1 Flora Hi Flora! Hi Flora!
+#> 2 David Hi David! Hi David!
+#> 3 Terra Hi Terra! Hi Terra!
+#> 4 <NA>  Hi you!   Hi!
+
+df |> mutate(greeting = str_glue("Hi {name}!"))
+#> # A tibble: 4 × 2
+#>   name  greeting 
+#>   <chr> <glue>   
+#> 1 Flora Hi Flora!
+#> 2 David Hi David!
+#> 3 Terra Hi Terra!
+#> 4 <NA>  Hi NA!
+
+df |> mutate(greeting = str_glue("{{Hi {name}!}}"))
+#> # A tibble: 4 × 2
+#>   name  greeting   
+#>   <chr> <glue>     
+#> 1 Flora {Hi Flora!}
+#> 2 David {Hi David!}
+#> 3 Terra {Hi Terra!}
+#> 4 <NA>  {Hi NA!}
+
+str_flatten(c("x", "y", "z"))
+#> [1] "xyz"
+str_flatten(c("x", "y", "z"), ", ")
+#> [1] "x, y, z"
+str_flatten(c("x", "y", "z"), ", ", last = ", and ")
+#> [1] "x, y, and z"
+
+df <- tribble(
+  ~ name, ~ fruit,
+  "Carmen", "banana",
+  "Carmen", "apple",
+  "Marvin", "nectarine",
+  "Terence", "cantaloupe",
+  "Terence", "papaya",
+  "Terence", "mandarin"
+)
+df |>
+  group_by(name) |> 
+  summarize(fruits = str_flatten(fruit, ", "))
+#> # A tibble: 3 × 2
+#>   name    fruits                      
+#>   <chr>   <chr>                       
+#> 1 Carmen  banana, apple               
+#> 2 Marvin  nectarine                   
+#> 3 Terence cantaloupe, papaya, mandarin
+
+# 14.4
+df1 <- tibble(x = c("a,b,c", "d,e", "f"))
+df1 |> 
+  separate_longer_delim(x, delim = ",")
+#> # A tibble: 6 × 1
+#>   x    
+#>   <chr>
+#> 1 a    
+#> 2 b    
+#> 3 c    
+#> 4 d    
+#> 5 e    
+#> 6 f
+
+df2 <- tibble(x = c("1211", "131", "21"))
+df2 |> 
+  separate_longer_position(x, width = 1)
+#> # A tibble: 9 × 1
+#>   x    
+#>   <chr>
+#> 1 1    
+#> 2 2    
+#> 3 1    
+#> 4 1    
+#> 5 1    
+#> 6 3    
+#> # ℹ 3 more rows
+
+df3 <- tibble(x = c("a10.1.2022", "b10.2.2011", "e15.1.2015"))
+df3 |> 
+  separate_wider_delim(
+    x,
+    delim = ".",
+    names = c("code", "edition", "year")
+  )
+#> # A tibble: 3 × 3
+#>   code  edition year 
+#>   <chr> <chr>   <chr>
+#> 1 a10   1       2022 
+#> 2 b10   2       2011 
+#> 3 e15   1       2015
+
+df3 |> 
+  separate_wider_delim(
+    x,
+    delim = ".",
+    names = c("code", NA, "year")
+  )
+#> # A tibble: 3 × 2
+#>   code  year 
+#>   <chr> <chr>
+#> 1 a10   2022 
+#> 2 b10   2011 
+#> 3 e15   2015
+
+df4 <- tibble(x = c("202215TX", "202122LA", "202325CA")) 
+df4 |> 
+  separate_wider_position(
+    x,
+    widths = c(year = 4, age = 2, state = 2)
+  )
+#> # A tibble: 3 × 3
+#>   year  age   state
+#>   <chr> <chr> <chr>
+#> 1 2022  15    TX   
+#> 2 2021  22    LA   
+#> 3 2023  25    CA
+
+df <- tibble(x = c("1-1-1", "1-1-2", "1-3", "1-3-2", "1"))
+
+debug <- df |> 
+  separate_wider_delim(
+    x,
+    delim = "-",
+    names = c("x", "y", "z"),
+    too_few = "debug"
+  )
+#> Warning: Debug mode activated: adding variables `x_ok`, `x_pieces`, and
+#> `x_remainder`.
+debug
+#> # A tibble: 5 × 6
+#>   x     y     z     x_ok  x_pieces x_remainder
+#>   <chr> <chr> <chr> <lgl>    <int> <chr>      
+#> 1 1-1-1 1     1     TRUE         3 ""         
+#> 2 1-1-2 1     2     TRUE         3 ""         
+#> 3 1-3   3     <NA>  FALSE        2 ""         
+#> 4 1-3-2 3     2     TRUE         3 ""         
+#> 5 1     <NA>  <NA>  FALSE        1 ""
+
+debug |> filter(!x_ok)
+#> # A tibble: 2 × 6
+#>   x     y     z     x_ok  x_pieces x_remainder
+#>   <chr> <chr> <chr> <lgl>    <int> <chr>      
+#> 1 1-3   3     <NA>  FALSE        2 ""         
+#> 2 1     <NA>  <NA>  FALSE        1 ""
+
+df |> 
+  separate_wider_delim(
+    x,
+    delim = "-",
+    names = c("x", "y", "z"),
+    too_few = "align_start"
+  )
+#> # A tibble: 5 × 3
+#>   x     y     z    
+#>   <chr> <chr> <chr>
+#> 1 1     1     1    
+#> 2 1     1     2    
+#> 3 1     3     <NA> 
+#> 4 1     3     2    
+#> 5 1     <NA>  <NA>
+
+df <- tibble(x = c("1-1-1", "1-1-2", "1-3-5-6", "1-3-2", "1-3-5-7-9"))
+
+debug <- df |> 
+  separate_wider_delim(
+    x,
+    delim = "-",
+    names = c("x", "y", "z"),
+    too_many = "debug"
+  )
+#> Warning: Debug mode activated: adding variables `x_ok`, `x_pieces`, and
+#> `x_remainder`.
+debug |> filter(!x_ok)
+#> # A tibble: 2 × 6
+#>   x         y     z     x_ok  x_pieces x_remainder
+#>   <chr>     <chr> <chr> <lgl>    <int> <chr>      
+#> 1 1-3-5-6   3     5     FALSE        4 -6         
+#> 2 1-3-5-7-9 3     5     FALSE        5 -7-9
+
+df |> 
+  separate_wider_delim(
+    x,
+    delim = "-",
+    names = c("x", "y", "z"),
+    too_many = "drop"
+  )
+#> # A tibble: 5 × 3
+#>   x     y     z    
+#>   <chr> <chr> <chr>
+#> 1 1     1     1    
+#> 2 1     1     2    
+#> 3 1     3     5    
+#> 4 1     3     2    
+#> 5 1     3     5
+
+df |> 
+  separate_wider_delim(
+    x,
+    delim = "-",
+    names = c("x", "y", "z"),
+    too_many = "merge"
+  )
+#> # A tibble: 5 × 3
+#>   x     y     z    
+#>   <chr> <chr> <chr>
+#> 1 1     1     1    
+#> 2 1     1     2    
+#> 3 1     3     5-6  
+#> 4 1     3     2    
+#> 5 1     3     5-7-9
+
+# 14.5
+str_length(c("a", "R for data science", NA))
+#> [1]  1 18 NA
+
+babynames |>
+  count(length = str_length(name), wt = n)
+#> # A tibble: 14 × 2
+#>   length        n
+#>    <int>    <int>
+#> 1      2   338150
+#> 2      3  8589596
+#> 3      4 48506739
+#> 4      5 87011607
+#> 5      6 90749404
+#> 6      7 72120767
+#> # ℹ 8 more rows
+
+babynames |> 
+  filter(str_length(name) == 15) |> 
+  count(name, wt = n, sort = TRUE)
+#> # A tibble: 34 × 2
+#>   name                n
+#>   <chr>           <int>
+#> 1 Franciscojavier   123
+#> 2 Christopherjohn   118
+#> 3 Johnchristopher   118
+#> 4 Christopherjame   108
+#> 5 Christophermich    52
+#> 6 Ryanchristopher    45
+#> # ℹ 28 more rows
+
+x <- c("Apple", "Banana", "Pear")
+str_sub(x, 1, 3)
+#> [1] "App" "Ban" "Pea"
+str_sub(x, -3, -1)
+#> [1] "ple" "ana" "ear"
+str_sub("a", 1, 5)
+#> [1] "a"
+
+babynames |> 
+  mutate(
+    first = str_sub(name, 1, 1),
+    last = str_sub(name, -1, -1)
+  )
+#> # A tibble: 1,924,665 × 7
+#>    year sex   name          n   prop first last 
+#>   <dbl> <chr> <chr>     <int>  <dbl> <chr> <chr>
+#> 1  1880 F     Mary       7065 0.0724 M     y    
+#> 2  1880 F     Anna       2604 0.0267 A     a    
+#> 3  1880 F     Emma       2003 0.0205 E     a    
+#> 4  1880 F     Elizabeth  1939 0.0199 E     h    
+#> 5  1880 F     Minnie     1746 0.0179 M     e    
+#> 6  1880 F     Margaret   1578 0.0162 M     t    
+#> # ℹ 1,924,659 more rows
+
+# 14.6
+charToRaw("Hadley")
+#> [1] 48 61 64 6c 65 79
+
+u <- c("\u00fc", "u\u0308")
+str_view(u)
+#> [1] │ ü
+#> [2] │ ü
+
+str_length(u)
+#> [1] 1 2
+str_sub(u, 1, 1)
+#> [1] "ü" "u"
+
+u[[1]] == u[[2]]
+#> [1] FALSE
+
+str_equal(u[[1]], u[[2]])
+#> [1] TRUE
+
+str_to_upper(c("i", "ı"))
+#> [1] "I" "I"
+str_to_upper(c("i", "ı"), locale = "tr")
+#> [1] "İ" "I"
+
+str_sort(c("a", "c", "ch", "h", "z"))
+#> [1] "a"  "c"  "ch" "h"  "z"
+str_sort(c("a", "c", "ch", "h", "z"), locale = "cs")
+#> [1] "a"  "c"  "h"  "ch" "z"
+
+
+# CH.14 EXECUTABLES -------------------------------------------------------
+# 14.2.4
+library(stringr)
+# 1a
+quote_string <- "He said \"That's amazing!\""
+print(quote_string)
+# 1b
+backslash_string <- "\\a\\b\\c\\d"
+print(backslash_string)
+# 1c
+many_slashes <- "\\\\\\\\"
+print(many_slashes)
+
+# 2
+x <- "This\u00a0is\u00a0tricky"
+print(x)
+str_view(x)
+
+# 14.3.4
+# 1
+library(stringr)
+# With the NA
+paste0("hi ", NA)
+str_c("hi ", NA)
+# Compare Letters
+paste0(letters[1:2], letters[1:3])
+str_c(letters[1:2], letters[1:2])
+
+# 2
+paste("hello", "world")
+paste0("hello", "world")
+# recreation
+str_c("hello", "world", sep = " ")
+
+# 3a
+food <- "mango"
+price <- "$1.99"
+# str_glue conversion
+str_glue("The price of {food} is {price}")
+# 3b
+age <- 21
+country <- "Tanzania"
+# str_c conversion
+str_c("I'm ", age, " years old and live in ", country)
+# 3c
+title <- "My Title"
+# str_glue conversion (escaping backslash)
+str_glue("\\\\section{{{title}}}")
+
+# 14.5.3
+# 1
+library(babynames)
+library(tidyverse)
+babynames %>%
+  mutate(name_length = str_length(name)) %>%
+  count(name_length, wt = n)
+
+# 2
+babynames %>%
+  mutate(
+    name_length = str_length(name),
+    middle_letter = if_else(
+      name_length %% 2 == 1,  # odd length
+      str_sub(name, (name_length + 1) / 2, (name_length + 1) / 2),
+      str_sub(name, name_length / 2, name_length / 2 + 1) # even length
+    )
+  ) %>%
+  select(name, middle_letter)
+
+# 3
+babynames %>%
+  mutate(name_length = str_length(name)) %>%
+  group_by(year) %>%
+  summarize(avg_length = weighted.mean(name_length, n)) %>%
+  ggplot(aes(x = year, y = avg_length)) +
+  geom_line(color = "steelblue") +
+  labs(title = "Average Baby Name Length Over Time",
+       y = "Average Length", x = "Year")
+
+
+# CHAPTER 15 --------------------------------------------------------------
+# PreReqs
+library(tidyverse)
+library(babynames)
+
+str_view(fruit, "berry")
+#>  [6] │ bil<berry>
+#>  [7] │ black<berry>
+#> [10] │ blue<berry>
+#> [11] │ boysen<berry>
+#> [19] │ cloud<berry>
+#> [21] │ cran<berry>
+#> ... and 8 more
+
+str_view(c("a", "ab", "ae", "bd", "ea", "eab"), "a.")
+#> [2] │ <ab>
+#> [3] │ <ae>
+#> [6] │ e<ab>
+
+str_view(fruit, "a...e")
+#>  [1] │ <apple>
+#>  [7] │ bl<ackbe>rry
+#> [48] │ mand<arine>
+#> [51] │ nect<arine>
+#> [62] │ pine<apple>
+#> [64] │ pomegr<anate>
+#> ... and 2 more
+
+# ab? matches an "a", optionally followed by a "b".
+str_view(c("a", "ab", "abb"), "ab?")
+#> [1] │ <a>
+#> [2] │ <ab>
+#> [3] │ <ab>b
+
+# ab+ matches an "a", followed by at least one "b".
+str_view(c("a", "ab", "abb"), "ab+")
+#> [2] │ <ab>
+#> [3] │ <abb>
+
+# ab* matches an "a", followed by any number of "b"s.
+str_view(c("a", "ab", "abb"), "ab*")
+#> [1] │ <a>
+#> [2] │ <ab>
+#> [3] │ <abb>
+
+str_view(words, "[aeiou]x[aeiou]")
+#> [284] │ <exa>ct
+#> [285] │ <exa>mple
+#> [288] │ <exe>rcise
+#> [289] │ <exi>st
+str_view(words, "[^aeiou]y[^aeiou]")
+#> [836] │ <sys>tem
+#> [901] │ <typ>e
+
+str_view(fruit, "apple|melon|nut")
+#>  [1] │ <apple>
+#> [13] │ canary <melon>
+#> [20] │ coco<nut>
+#> [52] │ <nut>
+#> [62] │ pine<apple>
+#> [72] │ rock <melon>
+#> ... and 1 more
+str_view(fruit, "aa|ee|ii|oo|uu")
+#>  [9] │ bl<oo>d orange
+#> [33] │ g<oo>seberry
+#> [47] │ lych<ee>
+#> [66] │ purple mangost<ee>n
+
+str_detect(c("a", "b", "c"), "[aeiou]")
+#> [1]  TRUE FALSE FALSE
+
+babynames |> 
+  filter(str_detect(name, "x")) |> 
+  count(name, wt = n, sort = TRUE)
+#> # A tibble: 974 × 2
+#>   name           n
+#>   <chr>      <int>
+#> 1 Alexander 665492
+#> 2 Alexis    399551
+#> 3 Alex      278705
+#> 4 Alexandra 232223
+#> 5 Max       148787
+#> 6 Alexa     123032
+#> # ℹ 968 more rows
+
+babynames |> 
+  group_by(year) |> 
+  summarize(prop_x = mean(str_detect(name, "x"))) |> 
+  ggplot(aes(x = year, y = prop_x)) + 
+  geom_line()
+
+x <- c("apple", "banana", "pear")
+str_count(x, "p")
+#> [1] 2 0 1
+
+str_count("abababa", "aba")
+#> [1] 2
+str_view("abababa", "aba")
+#> [1] │ <aba>b<aba>
+
+babynames |> 
+  count(name) |> 
+  mutate(
+    vowels = str_count(name, "[aeiou]"),
+    consonants = str_count(name, "[^aeiou]")
+  )
+#> # A tibble: 97,310 × 4
+#>   name          n vowels consonants
+#>   <chr>     <int>  <int>      <int>
+#> 1 Aaban        10      2          3
+#> 2 Aabha         5      2          3
+#> 3 Aabid         2      2          3
+#> 4 Aabir         1      2          3
+#> 5 Aabriella     5      4          5
+#> 6 Aada          1      2          2
+#> # ℹ 97,304 more rows
+
+babynames |> 
+  count(name) |> 
+  mutate(
+    name = str_to_lower(name),
+    vowels = str_count(name, "[aeiou]"),
+    consonants = str_count(name, "[^aeiou]")
+  )
+#> # A tibble: 97,310 × 4
+#>   name          n vowels consonants
+#>   <chr>     <int>  <int>      <int>
+#> 1 aaban        10      3          2
+#> 2 aabha         5      3          2
+#> 3 aabid         2      3          2
+#> 4 aabir         1      3          2
+#> 5 aabriella     5      5          4
+#> 6 aada          1      3          1
+#> # ℹ 97,304 more rows
+
+x <- c("apple", "pear", "banana")
+str_replace_all(x, "[aeiou]", "-")
+#> [1] "-ppl-"  "p--r"   "b-n-n-"
+
+x <- c("apple", "pear", "banana")
+str_remove_all(x, "[aeiou]")
+#> [1] "ppl" "pr"  "bnn"
+
+df <- tribble(
+  ~str,
+  "<Sheryl>-F_34",
+  "<Kisha>-F_45", 
+  "<Brandon>-N_33",
+  "<Sharon>-F_38", 
+  "<Penny>-F_58",
+  "<Justin>-M_41", 
+  "<Patricia>-F_84", 
+)
+
+df |> 
+  separate_wider_regex(
+    str,
+    patterns = c(
+      "<", 
+      name = "[A-Za-z]+", 
+      ">-", 
+      gender = ".",
+      "_",
+      age = "[0-9]+"
+    )
+  )
+#> # A tibble: 7 × 3
+#>   name    gender age  
+#>   <chr>   <chr>  <chr>
+#> 1 Sheryl  F      34   
+#> 2 Kisha   F      45   
+#> 3 Brandon N      33   
+#> 4 Sharon  F      38   
+#> 5 Penny   F      58   
+#> 6 Justin  M      41   
+#> # ℹ 1 more row
+
+# To create the regular expression \., we need to use \\.
+dot <- "\\."
+
+# But the expression itself only contains one \
+str_view(dot)
+#> [1] │ \.
+
+# And this tells R to look for an explicit .
+str_view(c("abc", "a.c", "bef"), "a\\.c")
+#> [2] │ <a.c>
+
+x <- "a\\b"
+str_view(x)
+#> [1] │ a\b
+str_view(x, "\\\\")
+#> [1] │ a<\>b
+
+str_view(c("abc", "a.c", "a*c", "a c"), "a[.]c")
+#> [2] │ <a.c>
+str_view(c("abc", "a.c", "a*c", "a c"), ".[*]c")
+#> [3] │ <a*c>
+
+str_view(fruit, "^a")
+#> [1] │ <a>pple
+#> [2] │ <a>pricot
+#> [3] │ <a>vocado
+str_view(fruit, "a$")
+#>  [4] │ banan<a>
+#> [15] │ cherimoy<a>
+#> [30] │ feijo<a>
+#> [36] │ guav<a>
+#> [56] │ papay<a>
+#> [74] │ satsum<a>
+
+str_view(fruit, "apple")
+#>  [1] │ <apple>
+#> [62] │ pine<apple>
+str_view(fruit, "^apple$")
+#> [1] │ <apple>
+
+x <- c("summary(x)", "summarize(df)", "rowsum(x)", "sum(x)")
+str_view(x, "sum")
+#> [1] │ <sum>mary(x)
+#> [2] │ <sum>marize(df)
+#> [3] │ row<sum>(x)
+#> [4] │ <sum>(x)
+str_view(x, "\\bsum\\b")
+#> [4] │ <sum>(x)
+
+str_view("abc", c("$", "^", "\\b"))
+#> [1] │ abc<>
+#> [2] │ <>abc
+#> [3] │ <>abc<>
+
+str_replace_all("abc", c("$", "^", "\\b"), "--")
+#> [1] "abc--"   "--abc"   "--abc--"
+
+x <- "abcd ABCD 12345 -!@#%."
+str_view(x, "[abc]+")
+#> [1] │ <abc>d ABCD 12345 -!@#%.
+str_view(x, "[a-z]+")
+#> [1] │ <abcd> ABCD 12345 -!@#%.
+str_view(x, "[^a-z0-9]+")
+#> [1] │ abcd< ABCD >12345< -!@#%.>
+
+# You need an escape to match characters that are otherwise
+# special inside of []
+str_view("a-b-c", "[a-c]")
+#> [1] │ <a>-<b>-<c>
+str_view("a-b-c", "[a\\-c]")
+#> [1] │ <a><->b<-><c>
+
+x <- "abcd ABCD 12345 -!@#%."
+str_view(x, "\\d+")
+#> [1] │ abcd ABCD <12345> -!@#%.
+str_view(x, "\\D+")
+#> [1] │ <abcd ABCD >12345< -!@#%.>
+str_view(x, "\\s+")
+#> [1] │ abcd< >ABCD< >12345< >-!@#%.
+str_view(x, "\\S+")
+#> [1] │ <abcd> <ABCD> <12345> <-!@#%.>
+str_view(x, "\\w+")
+#> [1] │ <abcd> <ABCD> <12345> -!@#%.
+str_view(x, "\\W+")
+#> [1] │ abcd< >ABCD< >12345< -!@#%.>
+
+str_view(fruit, "(..)\\1")
+#>  [4] │ b<anan>a
+#> [20] │ <coco>nut
+#> [22] │ <cucu>mber
+#> [41] │ <juju>be
+#> [56] │ <papa>ya
+#> [73] │ s<alal> berry
+
+str_view(words, "^(..).*\\1$")
+#> [152] │ <church>
+#> [217] │ <decide>
+#> [617] │ <photograph>
+#> [699] │ <require>
+#> [739] │ <sense>
+
+sentences |> 
+  str_replace("(\\w+) (\\w+) (\\w+)", "\\1 \\3 \\2") |> 
+  str_view()
+#> [1] │ The canoe birch slid on the smooth planks.
+#> [2] │ Glue sheet the to the dark blue background.
+#> [3] │ It's to easy tell the depth of a well.
+#> [4] │ These a days chicken leg is a rare dish.
+#> [5] │ Rice often is served in round bowls.
+#> [6] │ The of juice lemons makes fine punch.
+#> ... and 714 more
+
+sentences |> 
+  str_match("the (\\w+) (\\w+)") |> 
+  head()
+#>      [,1]                [,2]     [,3]    
+#> [1,] "the smooth planks" "smooth" "planks"
+#> [2,] "the sheet to"      "sheet"  "to"    
+#> [3,] "the depth of"      "depth"  "of"    
+#> [4,] NA                  NA       NA      
+#> [5,] NA                  NA       NA      
+#> [6,] NA                  NA       NA
+
+sentences |> 
+  str_match("the (\\w+) (\\w+)") |> 
+  as_tibble(.name_repair = "minimal") |> 
+  set_names("match", "word1", "word2")
+#> # A tibble: 720 × 3
+#>   match             word1  word2 
+#>   <chr>             <chr>  <chr> 
+#> 1 the smooth planks smooth planks
+#> 2 the sheet to      sheet  to    
+#> 3 the depth of      depth  of    
+#> 4 <NA>              <NA>   <NA>  
+#> 5 <NA>              <NA>   <NA>  
+#> 6 <NA>              <NA>   <NA>  
+#> # ℹ 714 more rows
+
+x <- c("a gray cat", "a grey dog")
+str_match(x, "gr(e|a)y")
+#>      [,1]   [,2]
+#> [1,] "gray" "a" 
+#> [2,] "grey" "e"
+str_match(x, "gr(?:e|a)y")
+#>      [,1]  
+#> [1,] "gray"
+#> [2,] "grey"
+
+bananas <- c("banana", "Banana", "BANANA")
+str_view(bananas, "banana")
+#> [1] │ <banana>
+str_view(bananas, regex("banana", ignore_case = TRUE))
+#> [1] │ <banana>
+#> [2] │ <Banana>
+#> [3] │ <BANANA>
+
+x <- "Line 1\nLine 2\nLine 3"
+str_view(x, ".Line")
+str_view(x, regex(".Line", dotall = TRUE))
+#> [1] │ Line 1<
+#>     │ Line> 2<
+#>     │ Line> 3
+
+x <- "Line 1\nLine 2\nLine 3"
+str_view(x, "^Line")
+#> [1] │ <Line> 1
+#>     │ Line 2
+#>     │ Line 3
+str_view(x, regex("^Line", multiline = TRUE))
+#> [1] │ <Line> 1
+#>     │ <Line> 2
+#>     │ <Line> 3
+
+phone <- regex(
+  r"(
+    \(?     # optional opening parens
+    (\d{3}) # area code
+    [)\-]?  # optional closing parens or dash
+    \ ?     # optional space
+    (\d{3}) # another three numbers
+    [\ -]?  # optional space or dash
+    (\d{4}) # four more numbers
+  )", 
+  comments = TRUE
+)
+
+str_extract(c("514-791-8141", "(123) 456 7890", "123456"), phone)
+#> [1] "514-791-8141"   "(123) 456 7890" NA
+
+str_view(c("", "a", "."), fixed("."))
+#> [3] │ <.>
+
+str_view("x X", "X")
+#> [1] │ x <X>
+str_view("x X", fixed("X", ignore_case = TRUE))
+#> [1] │ <x> <X>
+
+str_view("i İ ı I", fixed("İ", ignore_case = TRUE))
+#> [1] │ i <İ> ı I
+str_view("i İ ı I", coll("İ", ignore_case = TRUE, locale = "tr"))
+#> [1] │ <i> <İ> ı I
+
+str_view(words, "^[^aeiou]+$")
+#> [123] │ <by>
+#> [249] │ <dry>
+#> [328] │ <fly>
+#> [538] │ <mrs>
+#> [895] │ <try>
+#> [952] │ <why>
+
+str_view(words[!str_detect(words, "[aeiou]")])
+#> [1] │ by
+#> [2] │ dry
+#> [3] │ fly
+#> [4] │ mrs
+#> [5] │ try
+#> [6] │ why
+
+str_view(words, "a.*b|b.*a")
+#>  [2] │ <ab>le
+#>  [3] │ <ab>out
+#>  [4] │ <ab>solute
+#> [62] │ <availab>le
+#> [66] │ <ba>by
+#> [67] │ <ba>ck
+#> ... and 24 more
+
+words[str_detect(words, "a") & str_detect(words, "b")]
+#>  [1] "able"      "about"     "absolute"  "available" "baby"      "back"     
+#>  [7] "bad"       "bag"       "balance"   "ball"      "bank"      "bar"      
+#> [13] "base"      "basis"     "bear"      "beat"      "beauty"    "because"  
+#> [19] "black"     "board"     "boat"      "break"     "brilliant" "britain"  
+#> [25] "debate"    "husband"   "labour"    "maybe"     "probable"  "table"
+
+words[str_detect(words, "a.*e.*i.*o.*u")]
+# ...
+words[str_detect(words, "u.*o.*i.*e.*a")]
+
+words[
+  str_detect(words, "a") &
+    str_detect(words, "e") &
+    str_detect(words, "i") &
+    str_detect(words, "o") &
+    str_detect(words, "u")
+]
+#> character(0)
+
+str_view(sentences, "\\b(red|green|blue)\\b")
+#>   [2] │ Glue the sheet to the dark <blue> background.
+#>  [26] │ Two <blue> fish swam in the tank.
+#>  [92] │ A wisp of cloud hung in the <blue> air.
+#> [148] │ The spot on the blotter was made by <green> ink.
+#> [160] │ The sofa cushion is <red> and of light weight.
+#> [174] │ The sky that morning was clear and bright <blue>.
+#> ... and 20 more
+
+rgb <- c("red", "green", "blue")
+
+str_c("\\b(", str_flatten(rgb, "|"), ")\\b")
+#> [1] "\\b(red|green|blue)\\b"
+
+str_view(colors())
+#> [1] │ white
+#> [2] │ aliceblue
+#> [3] │ antiquewhite
+#> [4] │ antiquewhite1
+#> [5] │ antiquewhite2
+#> [6] │ antiquewhite3
+#> ... and 651 more
+
+cols <- colors()
+cols <- cols[!str_detect(cols, "\\d")]
+str_view(cols)
+#> [1] │ white
+#> [2] │ aliceblue
+#> [3] │ antiquewhite
+#> [4] │ aquamarine
+#> [5] │ azure
+#> [6] │ beige
+#> ... and 137 more
+
+pattern <- str_c("\\b(", str_flatten(cols, "|"), ")\\b")
+str_view(sentences, pattern)
+#>   [2] │ Glue the sheet to the dark <blue> background.
+#>  [12] │ A rod is used to catch <pink> <salmon>.
+#>  [26] │ Two <blue> fish swam in the tank.
+#>  [66] │ Cars and busses stalled in <snow> drifts.
+#>  [92] │ A wisp of cloud hung in the <blue> air.
+#> [112] │ Leaves turn <brown> and <yellow> in the fall.
+#> ... and 57 more
+
+apropos("replace")
+#> [1] "%+replace%"       "replace"          "replace_na"      
+#> [4] "setReplaceMethod" "str_replace"      "str_replace_all" 
+#> [7] "str_replace_na"   "theme_replace"
+
+head(list.files(pattern = "\\.Rmd$"))
+#> character(0)
+
+
+# CH.15 EXECUTABLES -------------------------------------------------------
+
+# 15.3.5
+# 1a
+library(babynames)
+library(tidyverse)
+library(stringr)
+
+vowel_pattern <- "[aeiouAEIOU]"
+
+babynames %>%
+  mutate(
+    vowel_count = str_count(name, vowel_pattern),
+    name_length = str_length(name),
+    vowel_ratio = vowel_count / name_length
+  ) %>%
+  arrange(desc(vowel_count)) %>%
+  distinct(name, .keep_all = TRUE) %>%
+  slice_head(n = 1)
+
+# 1b
+babynames %>%
+  mutate(
+    vowel_count = str_count(name, vowel_pattern),
+    name_length = str_length(name),
+    vowel_ratio = vowel_count / name_length
+  ) %>%
+  filter(name_length > 0) %>%
+  arrange(desc(vowel_ratio)) %>%
+  distinct(name, .keep_all = TRUE) %>%
+  slice_head(n = 1)
+
+# 2
+x <- "a/b/c/d/e"
+x_backslash <- str_replace_all(x, "/", "\\\\")
+x_backslash
+str_replace_all(x_backslash, "\\\\", "/")
+
+# 3
+str_to_lower_simple <- function(x) {
+  str_replace_all(x, setNames(letters, LETTERS))
+}
+
+str_to_lower_simple("HeLLo WoRLd!")
+
+# 4
+phone_numbers <- c(
+  "309-555-1234", "(309) 555-1234", "309.555.1234", "309 555 1234", "+1 (309) 555-1234"
+)
+
+str_view(phone_numbers, "\\(?\\+?1?\\)?[-.\\s]?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}")
+
+# 15.4.7
+# 1a
+str_view("'\\", "'\\\\")
+# 1b
+str_view("$^$", "\\$\\^\\$")
+
+# 2 explained in google doc
+
+# 3
+library(stringr)
+data("words")
+# 3a
+str_subset(words, "^y")
+# 3b
+str_subset(words, "^[^y]")
+# 3c
+str_subset(words, "x$")
+# 3d
+str_subset(words, "^...$")
+# 3e
+str_subset(words, "^.{7,}$")
+# 3f
+str_subset(words, "[aeiou][^aeiou]")
+# 3g
+str_subset(words, "([aeiou][^aeiou]){2,}")
+# 3h
+str_subset(words, "^([aeiou][^aeiou])+$")
+
+# 4
+british_american <- c(
+  "aer?oplane", "alumin(i)?um", "analogue?", "ar(se|ss)", 
+  "cent(re|er)", "defen[cs]e", "dough?nut", "gr[ae]y", 
+  "modelling?", "sceptic", "summari[sz]e"
+)
+
+# 5
+swapped <- str_replace(words, "^(.)(.*)(.)$", "\\3\\2\\1")
+words[swapped %in% words]
+
+# 6 was done in google doc & 7 was attempted via the website link
+
+# 15.6.4
+# 1a
+str_subset(words, "^x|x$")
+words[str_detect(words, "^x") | str_detect(words, "x$")]
+# 1b
+str_subset(words, "^[aeiou].*[^aeiou]$")
+words[str_detect(words, "^[aeiou]") & str_detect(words, "[^aeiou]$")]
+# 1c
+words[str_detect(words, "a") & 
+        str_detect(words, "e") & 
+        str_detect(words, "i") & 
+        str_detect(words, "o") & 
+        str_detect(words, "u")]
+
+# 2 - FOR IT
+str_subset(words, "[^c]ie")
+# 2 - AGAINST IT
+str_subset(words, "cei")
+
+# 3
+library(grDevices)
+col_names <- colors()
+str_subset(col_names, "^(light|dark|medium)")
+str_replace(col_names, "^(light|dark|medium)", "")
+
+# 4
+datasets <- data(package = "datasets")$results[, "Item"]
+cleaned_datasets <- str_replace(datasets, " \\(.*\\)", "")
+# to see unique datasets
+unique(cleaned_datasets)
