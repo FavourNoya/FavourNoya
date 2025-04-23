@@ -1,0 +1,364 @@
+# CHAPTER 18 EXECUTABLES --------------------------------------------------
+
+# 18.2.1
+x <- c(1, NA, 3)
+is.na(x)
+
+sum(is.na(x))
+mean(is.na(x))
+
+# 18.2.2 
+library(tidyverse)
+
+df <- tibble(x = c(1, NA, 3))
+df %>% filter(x > 1)       
+df %>% filter(!is.na(x))    
+
+# 18.2.3
+x <- c(1, NA, 3)
+mean(x)              
+mean(x, na.rm = TRUE)
+
+sum(x)
+sum(x, na.rm = TRUE)
+
+# 18.2.4
+library(nycflights13)
+library(dplyr)
+
+flights %>% 
+  group_by(dest) %>% 
+  summarise(delay = mean(dep_delay))      
+
+flights %>% 
+  group_by(dest) %>% 
+  summarise(delay = mean(dep_delay, na.rm = TRUE))  
+
+# 18.4 
+flights %>% 
+  filter(!is.na(dep_delay), !is.na(arr_delay)) %>%
+  mutate(gain = dep_delay - arr_delay) %>%
+  summarise(mean(gain), mean(dep_delay), mean(arr_delay))
+
+
+# CHAPTER 19 EXECUTABLES --------------------------------------------------
+
+# 19.1.1
+library(tidyverse)
+library(nycflights13)
+
+# Keys
+airlines
+airports
+planes
+weather
+
+# 19.1.2 
+
+flights2 <- flights %>% 
+  select(year:day, hour, origin, dest, tailnum, carrier)
+
+# 19.1.2.1 
+flights2 %>%
+  select(-origin, -dest) %>%
+  left_join(airlines, by = "carrier")
+
+# 19.1.2.2 
+flights2 %>%
+  select(-year, -day, -hour, -origin, -carrier) %>%
+  left_join(planes, by = "tailnum")
+
+# 19.1.2.3 
+flights2 %>%
+  select(-origin, -tailnum, -carrier) %>%
+  left_join(airports, c("dest" = "faa"))
+
+# 19.1.2.4 
+flights2 %>%
+  select(year:day, hour, origin, dest) %>%
+  left_join(weather)
+
+# 19.2 Filtering Joins
+
+# 19.2.1 
+top_dest <- flights %>%
+  count(dest, sort = TRUE) %>%
+  head(10)
+
+# 19.2.2 
+flights %>%
+  filter(dest %in% top_dest$dest)
+
+# 19.2.3 
+flights %>%
+  semi_join(top_dest)
+
+# 19.2.4 
+flights %>%
+  anti_join(planes, by = "tailnum")
+
+# 19.3.1 Mutating joins
+
+# 19.3.1.1 
+flights2 <- flights |> 
+  select(year, time_hour, origin, dest, tailnum, carrier)
+flights2
+
+# 19.3.1.2
+flights2 |>
+  left_join(airlines)
+
+# 19.3.1.3 
+flights2 |> 
+  left_join(weather |> select(origin, time_hour, temp, wind_speed))
+
+# 19.3.1.4 
+flights2 |> 
+  left_join(planes |> select(tailnum, type, engines, seats))
+
+# 19.3.1.5 
+flights2 |> 
+  filter(tailnum == "N3ALAA") |> 
+  left_join(planes |> select(tailnum, type, engines, seats))
+
+# 19.3.2 
+
+# 19.3.2.1 
+flights2 |> 
+  left_join(planes)
+
+# 19.3.2.2 
+flights2 |> 
+  left_join(planes, join_by(tailnum))
+
+# 19.4 How do joins work?
+
+# 19.4.1 
+x <- tribble(
+  ~key, ~val_x,
+  1, "x1",
+  2, "x2",
+  3, "x3"
+)
+
+y <- tribble(
+  ~key, ~val_y,
+  1, "y1",
+  2, "y2",
+  4, "y3"
+)
+
+x  # Show x tibble
+y  # Show y tibble
+
+# 19.4.3 
+inner_join(x, y, by = "key")
+
+# 19.4.4
+left_join(x, y, by = "key")
+
+# 19.4.5
+right_join(x, y, by = "key")
+
+# 19.4.6 
+full_join(x, y, by = "key")
+
+# 19.4.8 
+df1 <- tibble(key = c(1, 2, 2), val_x = c("x1", "x2", "x3"))
+df2 <- tibble(key = c(1, 2, 2), val_y = c("y1", "y2", "y3"))
+
+inner_join(df1, df2, by = "key")  
+
+# 19.4.9
+semi_join(x, y, by = "key")
+
+# 19.4.10 
+anti_join(x, y, by = "key")
+
+# 19.5.1 Cross joins
+df <- tibble(name = c("John", "Simon", "Tracy", "Max"))
+df |> cross_join(df)
+#> # A tibble: 16 × 2
+#>   name.x name.y
+#>   <chr>  <chr> 
+#> 1 John   John  
+#> 2 John   Simon 
+#> 3 John   Tracy 
+#> 4 John   Max   
+#> 5 Simon  John  
+#> 6 Simon  Simon 
+#> # ℹ 10 more rows
+
+
+# 19.5.1.1 Inequality joins
+df <- tibble(id = 1:4, name = c("John", "Simon", "Tracy", "Max"))
+df |> inner_join(df, join_by(id < id))
+#> # A tibble: 6 × 4
+#>    id.x name.x  id.y name.y
+#>   <int> <chr>  <int> <chr> 
+#> 1     1 John       2 Simon 
+#> 2     1 John       3 Tracy 
+#> 3     1 John       4 Max   
+#> 4     2 Simon      3 Tracy 
+#> 5     2 Simon      4 Max   
+#> 6     3 Tracy      4 Max
+
+
+# 19.5.1.2 Rolling joins
+df <- tibble(name = c("John", "Simon", "Tracy", "Max"))
+df |> cross_join(df)
+#> # A tibble: 16 × 2
+#>   name.x name.y
+#>   <chr>  <chr> 
+#> 1 John   John  
+#> 2 John   Simon 
+#> 3 John   Tracy 
+#> 4 John   Max   
+#> 5 Simon  John  
+#> 6 Simon  Simon 
+#> # ℹ 10 more rows
+
+# 19.5.1.3 Overlap joins
+parties <- tibble(
+  q = 1:4,
+  party = ymd(c("2022-01-10", "2022-04-04", "2022-07-11", "2022-10-03")),
+  start = ymd(c("2022-01-01", "2022-04-04", "2022-07-11", "2022-10-03")),
+  end = ymd(c("2022-04-03", "2022-07-11", "2022-10-02", "2022-12-31"))
+)
+parties
+#> # A tibble: 4 × 4
+#>       q party      start      end       
+#>   <int> <date>     <date>     <date>    
+#> 1     1 2022-01-10 2022-01-01 2022-04-03
+#> 2     2 2022-04-04 2022-04-04 2022-07-11
+#> 3     3 2022-07-11 2022-07-11 2022-10-02
+#> 4     4 2022-10-03 2022-10-03 2022-12-31
+
+# CHAPTER 18 EXERCISES ----------------------------------------------------
+# 18.3.4
+# 1
+library(nycflights13)
+library(dplyr)
+
+missing_data_by_carrier <- flights %>%
+  group_by(carrier) %>%
+  summarise(
+    missing_dep_delay = sum(is.na(dep_delay)),
+    missing_arr_delay = sum(is.na(arr_delay)),
+    total_flights = n()
+  )
+
+missing_data_by_carrier <- missing_data_by_carrier %>%
+  mutate(
+    dep_delay_missing_percentage = (missing_dep_delay / total_flights) * 100,
+    arr_delay_missing_percentage = (missing_arr_delay / total_flights) * 100
+  )
+print(missing_data_by_carrier)
+
+
+# CHAPTER 19 EXERCISES ----------------------------------------------------
+
+# 19.2.4
+# NUMBERS 1-2 WERE EXPLAINED IN GOOGLE DOC.
+
+# 3
+install.packages("lubridate")
+library(tidyverse)
+library(nycflights13)
+
+special_days <- tibble(
+  date = as.Date(c("2022-12-24", "2022-12-25")),  
+  description = c("Christmas Eve", "Christmas Day")
+) %>%
+  mutate(
+    year = lubridate::year(date),
+    month = lubridate::month(date),
+    day = lubridate::day(date)
+  ) %>%
+  select(-date)  # Optional: drop the original date column
+
+flights %>%
+  left_join(special_days, by = c("year", "month", "day"))
+
+# NUMBERS 4-5 WERE EXPLAINED IN GOOGLE DOC.
+
+# 19.3.4
+# 1
+flights2 <- nycflights13::flights
+worst_hours <- flights2 %>%
+  group_by(time_hour) %>%
+  summarise(total_delay = sum(arr_delay, na.rm = TRUE)) %>%
+  arrange(desc(total_delay)) %>%
+  head(48)
+
+# 2
+flights_to_top_dest <- flights %>%
+  filter(dest %in% top_dest$dest)
+
+# 3
+flights_weather <- flights2 %>%
+  left_join(weather, by = c("origin", "time_hour"))
+
+# 4 was answered in google doc.
+
+# 5
+carrier_per_plane <- flights %>%
+  group_by(tailnum) %>%
+  summarise(carriers = n_distinct(carrier)) %>%
+  filter(carriers > 1)
+
+# 6 was answered in google doc.
+
+# 7
+avg_delay_by_dest <- flights %>%
+  group_by(dest) %>%
+  summarise(avg_delay = mean(arr_delay, na.rm = TRUE))
+
+airports %>%
+  semi_join(flights, by = c("faa" = "dest")) %>%
+  left_join(avg_delay_by_dest, by = c("faa" = "dest")) %>%
+  ggplot(aes(x = lon, y = lat)) +
+  borders("state") +
+  geom_point(aes(size = avg_delay, color = avg_delay)) +
+  coord_quickmap()
+
+# 8
+library(nycflights13)
+library(dplyr)
+library(lubridate)
+
+june_13_delays <- flights %>%
+  mutate(date = make_date(year, month, day)) %>%
+  filter(date == as.Date("2013-06-13"))
+
+# 19.5.5
+# 1
+
+x |> full_join(y, join_by(key == key))
+#> # A tibble: 4 × 3
+#>     key val_x val_y
+#>   <dbl> <chr> <chr>
+#> 1     1 x1    y1   
+#> 2     2 x2    y2   
+#> 3     3 x3    <NA> 
+#> 4     4 <NA>  y3
+
+x |> full_join(y, join_by(key == key), keep = TRUE)
+#> # A tibble: 4 × 4
+#>   key.x val_x key.y val_y
+#>   <dbl> <chr> <dbl> <chr>
+#> 1     1 x1        1 y1   
+#> 2     2 x2        2 y2   
+#> 3     3 x3       NA <NA> 
+#> 4    NA <NA>      4 y3
+
+# 2
+parties <- tibble(
+  id = 1:3,
+  start = as.POSIXct(c("2023-01-01 18:00", "2023-01-01 19:00", "2023-01-01 20:00")),
+  end = as.POSIXct(c("2023-01-01 21:00", "2023-01-01 22:00", "2023-01-01 23:00"))
+)
+overlaps <- parties |> 
+  inner_join(parties, join_by(start < end, end > start), suffix = c(".a", ".b")) |>
+  filter(id.a != id.b)
+overlaps
