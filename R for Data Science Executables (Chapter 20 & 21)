@@ -1,0 +1,452 @@
+# CHAPTER 20 --------------------------------------------------------------
+
+# 20.2.1 Prerequisites
+library(readxl)
+library(tidyverse)
+library(writexl)
+
+# Working Directory
+getwd()
+setwd("/Users/favournoya/Documents")
+
+# 20.2.3 Reading Excel spreadsheets
+students <- read_excel("/Users/favournoya/Documents/students.xlsx")
+
+read_excel(
+  "/Users/favournoya/Documents/students.xlsx",
+  col_names = c("student_id", "full_name", "favourite_food", "meal_plan", "age")
+)
+
+read_excel(
+  "/Users/favournoya/Documents/students.xlsx",
+  col_names = c("student_id", "full_name", "favourite_food", "meal_plan", "age"),
+  skip = 1
+)
+
+read_excel(
+  "/Users/favournoya/Documents/students.xlsx",
+  col_names = c("student_id", "full_name", "favourite_food", "meal_plan", "age"),
+  skip = 1,
+  na = c("", "N/A")
+)
+
+read_excel(
+  "/Users/favournoya/Documents/students.xlsx",
+  col_names = c("student_id", "full_name", "favourite_food", "meal_plan", "age"),
+  skip = 1,
+  na = c("", "N/A"),
+  col_types = c("numeric", "text", "text", "text", "numeric")
+)
+
+students <- read_excel(
+  "/Users/favournoya/Documents/students.xlsx",
+  col_names = c("student_id", "full_name", "favourite_food", "meal_plan", "age"),
+  skip = 1,
+  na = c("", "N/A"),
+  col_types = c("numeric", "text", "text", "text", "text")
+)
+
+students <- students |>
+  mutate(
+    age = if_else(age == "five", "5", age),
+    age = parse_number(age)
+  )
+
+# 20.2.4 Reading worksheets
+
+# Read first worksheet directly
+read_excel("penguins.xlsx", sheet = "Torgersen Island")
+
+# Save the worksheet as an object and handle NAs
+penguins_torgersen <- read_excel("penguins.xlsx", sheet = "Torgersen Island", na = "NA")
+
+# See the names of all worksheets in the Excel file
+excel_sheets("penguins.xlsx")
+
+# Read the remaining worksheets
+penguins_biscoe <- read_excel("penguins.xlsx", sheet = "Biscoe Island", na = "NA")
+penguins_dream  <- read_excel("penguins.xlsx", sheet = "Dream Island", na = "NA")
+
+# Check the dimensions of each tibble
+dim(penguins_torgersen)
+dim(penguins_biscoe)
+dim(penguins_dream)
+
+# Combine all worksheets into one tibble
+penguins <- bind_rows(penguins_torgersen, penguins_biscoe, penguins_dream)
+
+# 20.2.5 Reading part of a sheet
+
+# Get the path to the built-in example Excel file
+deaths_path <- readxl_example("deaths.xlsx")
+
+# Read full sheet (shows extra non-data rows)
+deaths <- read_excel(deaths_path)
+
+# Read only the actual data range (A5 to F15)
+deaths_clean <- read_excel(deaths_path, range = "A5:F15")
+
+# 20.2.7 Writing to Excel
+
+# Create a tibble
+bake_sale <- tibble(
+  item     = factor(c("brownie", "cupcake", "cookie")),
+  quantity = c(10, 5, 8)
+)
+
+# Write tibble to Excel
+write_xlsx(bake_sale, path = "bake-sale.xlsx")
+
+# Read it back in
+read_excel("bake-sale.xlsx")
+
+# CHAPTER 20.3: Google Sheets ----------------------------------------------
+
+# 20.3.1 Prerequisites
+library(googlesheets4)
+library(tidyverse)
+
+# 20.3.3 Reading Excel Version of Google Sheet
+
+# Basic read of "students #2.xlsx"
+students <- read_excel("students #2.xlsx")
+
+# Read with custom column names, skipping first row, treating "N/A" as NA
+students <- read_excel(
+  "students #2.xlsx",
+  col_names = c("student_id", "full_name", "favourite_food", "meal_plan", "age"),
+  skip = 1,
+  na = c("", "N/A"),
+  col_types = c("numeric", "text", "text", "text", "text")
+)
+
+# 20.3.4 Writing to Excel (instead of Google Sheets)
+
+# Create a bake_sale tibble
+bake_sale <- tibble(
+  item     = factor(c("brownie", "cupcake", "cookie")),
+  quantity = c(10, 5, 8)
+)
+
+# Save the bake_sale tibble as an Excel file
+write_xlsx(bake_sale, path = "bake-sale.xlsx")
+
+# 20.3.5 Skipped (Authentication)
+# This section is only relevant for working with live
+# Google Sheets via googlesheets4 & since I am working
+# offline from my downloaded Excel version, then no
+# action is needed for local Excel files.
+
+
+# CHAPTER 21 --------------------------------------------------------------
+library(DBI)
+library(dbplyr)
+library(tidyverse)
+
+# 21.3.1 Connecting to an in-process duckdb database (temporary)
+con <- DBI::dbConnect(duckdb::duckdb())
+
+# 21.3.2 Load some data into the database
+dbWriteTable(con, "mpg", ggplot2::mpg)
+dbWriteTable(con, "diamonds", ggplot2::diamonds)
+
+# 21.3.3 DBI basics: List tables in the database
+dbListTables(con)
+
+# Read entire diamonds table as a tibble
+con |> 
+  dbReadTable("diamonds") |> 
+  as_tibble()
+
+# Write and run a SQL query using dbGetQuery()
+sql <- "
+  SELECT carat, cut, clarity, color, price 
+  FROM diamonds 
+  WHERE price > 15000
+"
+
+as_tibble(dbGetQuery(con, sql))
+
+# 21.4 dbplyr basics
+
+# Reference a table in the database (lazy object)
+diamonds_db <- tbl(con, "diamonds")
+
+# Apply dplyr verbs (lazy — query is not run yet)
+big_diamonds_db <- diamonds_db |> 
+  filter(price > 15000) |> 
+  select(carat:clarity, price)
+
+# See the SQL code dbplyr will generate and run
+big_diamonds_db |> 
+  show_query()
+
+# Actually run the query and bring the results into R as a tibble
+big_diamonds <- big_diamonds_db |> 
+  collect()
+
+# 21.5 dbplyr SQL Integration -----------------------------------------------
+
+# Load flights and planes tables into your duckdb connection
+dbplyr::copy_nycflights13(con)
+
+# Reference the tables as lazy dbplyr objects
+flights <- tbl(con, "flights")
+planes <- tbl(con, "planes")
+
+# 21.5.1 SQL basics
+# Show base SQL queries
+flights |> show_query()
+planes  |> show_query()
+
+# WHERE + ORDER BY
+flights |> 
+  filter(dest == "IAH") |> 
+  arrange(dep_delay) |> 
+  show_query()
+
+# GROUP BY with summarize
+flights |> 
+  group_by(dest) |> 
+  summarize(dep_delay = mean(dep_delay, na.rm = TRUE)) |> 
+  show_query()
+
+# 21.5.2 SELECT
+
+# Select specific columns
+planes |> 
+  select(tailnum, type, manufacturer, model, year) |> 
+  show_query()
+
+# Rename (alias) a column
+planes |> 
+  select(tailnum, type, manufacturer, model, year) |> 
+  rename(year_built = year) |> 
+  show_query()
+
+# Relocate columns
+planes |> 
+  select(tailnum, type, manufacturer, model, year) |> 
+  relocate(manufacturer, model, .before = type) |> 
+  show_query()
+
+# Use mutate to create a derived column
+flights |> 
+  mutate(speed = distance / (air_time / 60)) |> 
+  show_query()
+
+# 21.5.4 GROUP BY
+diamonds_db |> 
+  group_by(cut) |> 
+  summarize(
+    n = n(),
+    avg_price = mean(price, na.rm = TRUE)
+  ) |> 
+  show_query()
+
+# 21.5.5 WHERE
+
+# Basic OR condition
+flights |> 
+  filter(dest == "IAH" | dest == "HOU") |> 
+  show_query()
+
+# AND condition
+flights |> 
+  filter(arr_delay > 0 & arr_delay < 20) |> 
+  show_query()
+
+# Using %in%
+flights |> 
+  filter(dest %in% c("IAH", "HOU")) |> 
+  show_query()
+
+# Handling NULL (NA in R)
+flights |> 
+  filter(!is.na(dep_delay)) |> 
+  show_query()
+
+# Using HAVING for aggregated filters
+diamonds_db |> 
+  group_by(cut) |> 
+  summarize(n = n()) |> 
+  filter(n > 100) |> 
+  show_query()
+
+# 21.5.6 ORDER BY
+# Translate arrange() into ORDER BY SQL clause
+flights |> 
+  arrange(year, month, day, desc(dep_delay)) |> 
+  show_query()
+
+# 21.5.7 Subqueries
+
+# When mutate() expressions depend on newly created variables
+flights |> 
+  mutate(
+    year1 = year + 1,
+    year2 = year1 + 1
+  ) |> 
+  show_query()
+
+# When filtering on a variable just created in mutate()
+flights |> 
+  mutate(year1 = year + 1) |> 
+  filter(year1 == 2014) |> 
+  show_query()
+
+# 21.5.8 Joins
+
+# Join flights with planes (renaming 'year' as 'year_built')
+flights |> 
+  left_join(
+    planes |> rename(year_built = year),
+    by = "tailnum"
+  ) |> 
+  show_query()
+
+# 21.5.9 Other verbs — just some examples
+
+# intersect() (works between two queries or tibbles)
+flights1 <- flights |> filter(month == 1)
+flights2 <- flights |> filter(day == 1)
+
+intersect(flights1, flights2) |> 
+  show_query()
+
+
+# CH.20 EXERCISES ---------------------------------------------------------
+
+# 20.2.9
+# 1
+library(readxl)
+
+setwd("/Users/favournoya/Documents")
+
+survey <- read_excel("survey prob1.xlsx", 
+                     col_names = c("survey_id", "n_pets"), 
+                     col_types = c("text", "numeric"))
+
+survey
+
+# 2
+library(readxl)
+
+setwd("/Users/favournoya/Documents")
+
+roster <- read_excel("roster.xlsx",
+                     col_types = c("numeric", "text", "numeric"))
+
+roster
+
+# 3a
+library(readxl)
+
+setwd("/Users/favournoya/Documents")
+
+# Skip the top 4 non-data rows and assign column names
+sales <- read_excel("sales.xlsx", 
+                    col_names = c("id", "n"), 
+                    skip = 4)
+
+sales
+
+# 3b
+library(tidyverse)
+
+sales_tidy <- sales |> 
+  # Identify the rows where brand labels appear (like "Brand 1")
+  mutate(brand = if_else(str_detect(id, "Brand"), id, NA_character_)) |> 
+  # Fill the brand name downward through the column
+  fill(brand) |> 
+  # Remove the rows that are just brand labels
+  filter(id != brand) |> 
+  # Convert character values to numbers
+  mutate(
+    id = as.numeric(id),
+    n = as.numeric(n)
+  ) |> 
+  select(brand, id, n)
+
+sales_tidy
+
+# 4
+library(openxlsx)
+
+bake_sale <- tibble(
+  item = c("brownie", "cupcake", "cookie"),
+  quantity = c(10, 5, 8)
+)
+
+write.xlsx(bake_sale, "bake_sale.xlsx")
+
+# 5
+library(janitor)
+
+students <- read_excel("students.xlsx") |> 
+  clean_names()
+
+students
+
+# 6 explained in gDoc
+
+# 20.3.6 PROBS ------------------------------------------------------------
+
+# 1 from excel
+library(readxl)
+
+setwd("/Users/favournoya/Documents")
+
+students_excel <- read_excel("students.xlsx")
+students_excel
+
+# 1 from google sheets
+library(googlesheets4)
+
+gs4_deauth()  # if public sheet
+
+students_sheet_id <- "1V1nPp1tzOuutXFLb3G9Eyxi3qxeEhnOXUzL5_BcCQ0w"
+students_google <- read_sheet(students_sheet_id)
+students_google
+
+# 2
+survey2 <- read_excel("survey prob2.xlsx", 
+                      col_names = c("survey_id", "n_pets"),
+                      col_types = c("text", "numeric"))
+
+survey2
+
+# 3
+roster2 <- read_excel("roster prob2.xlsx", 
+                      col_types = c("numeric", "text", "numeric"))
+
+roster2
+
+
+# CH. 21 EXERCISES --------------------------------------------------------
+
+# 1a
+flights |> 
+  distinct(tailnum) |> 
+  show_query()
+# 1b
+flights |> 
+  head(5) |> 
+  show_query()
+
+# 2a
+sql <- "SELECT * FROM flights WHERE dep_delay < arr_delay"
+
+DBI::dbGetQuery(con, sql) |> 
+  as_tibble()
+
+# 2b
+# Define the SQL query as a string
+sql <- "
+  SELECT *, distance / (air_time / 60.0) AS speed
+  FROM flights
+"
+
+# Run the query and return as a tibble
+DBI::dbGetQuery(con, sql) |> 
+  as_tibble()
