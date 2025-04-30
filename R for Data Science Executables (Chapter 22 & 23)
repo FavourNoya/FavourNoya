@@ -1,0 +1,346 @@
+# CHAPTER 22 --------------------------------------------------------------
+
+# 22.1.1 Prerequisites
+library(tidyverse)
+library(arrow)
+library(dbplyr, warn.conflicts = FALSE)
+library(duckdb)
+
+# 22.2 Getting the data
+dir.create("data", showWarnings = FALSE)
+
+curl::multi_download(
+  "https://r4ds.s3.us-west-2.amazonaws.com/seattle-library-checkouts.csv",
+  "data/seattle-library-checkouts.csv",
+  resume = TRUE
+)
+
+# 22.3 Opening a dataset
+library(readr)
+
+seattle_df <- read_csv(
+  file = "data/seattle-library-checkouts.csv",
+  guess_max = 10000,
+  progress = TRUE
+)
+
+problems(seattle_df)
+
+library(arrow)
+library(dplyr)
+
+clean_df <- seattle_df |> filter(!is.na(CheckoutYear))
+
+write_dataset(clean_df, path = "data/seattle-library-checkouts", format = "parquet")
+
+seattle_pq <- open_dataset("data/seattle-library-checkouts")
+
+# 22.4.3
+library(readr)
+library(dplyr)
+library(arrow)
+
+seattle_df <- read_csv(
+  file = "data/seattle-library-checkouts.csv",
+  guess_max = 10000,
+  progress = TRUE
+)
+
+problems(seattle_df)
+
+clean_df <- seattle_df |> filter(!is.na(CheckoutYear))
+
+pq_path <- "data/seattle-library-checkouts"
+
+clean_df |>
+  group_by(CheckoutYear) |>
+  write_dataset(path = pq_path, format = "parquet")
+
+tibble(
+  files = list.files(pq_path, recursive = TRUE),
+  size_MB = file.size(file.path(pq_path, files)) / 1024^2
+)
+
+# 22.5.2 Using duckdb with arrow
+seattle_pq |> 
+  to_duckdb() |>
+  filter(CheckoutYear >= 2018, MaterialType == "BOOK") |>
+  group_by(CheckoutYear) |>
+  summarize(TotalCheckouts = sum(Checkouts)) |>
+  arrange(desc(CheckoutYear)) |>
+  collect()
+
+
+# CHAPTER 23 --------------------------------------------------------------
+
+# PREREQS
+library(tidyverse)
+library(repurrrsive)
+library(jsonlite)
+
+# --- 23.2 Lists ---
+x1 <- list(1:4, "a", TRUE)
+x1
+
+x2 <- list(a = 1:2, b = 1:3, c = 1:4)
+x2
+
+str(x1)
+str(x2)
+
+# --- 23.2.1 Hierarchy ---
+x3 <- list(list(1, 2), list(3, 4))
+str(x3)
+
+c(c(1, 2), c(3, 4))
+
+x4 <- c(list(1, 2), list(3, 4))
+str(x4)
+
+x5 <- list(1, list(2, list(3, list(4, list(5)))))
+str(x5)
+
+# --- 23.2.2 List-columns ---
+df <- tibble(
+  x = 1:2, 
+  y = c("a", "b"),
+  z = list(list(1, 2), list(3, 4, 5))
+)
+df
+
+df |> filter(x == 1)
+
+df |> pull(z) |> str()
+
+# --- 23.3 Unnesting basics ---
+df1 <- tribble(
+  ~x, ~y,
+  1, list(a = 11, b = 12),
+  2, list(a = 21, b = 22),
+  3, list(a = 31, b = 32),
+)
+
+df2 <- tribble(
+  ~x, ~y,
+  1, list(11, 12, 13),
+  2, list(21),
+  3, list(31, 32),
+)
+
+# --- 23.3.1 unnest_wider() ---
+df1 |> unnest_wider(y)
+
+df1 |> unnest_wider(y, names_sep = "_")
+
+# --- 23.3.2 unnest_longer() ---
+df2 |> unnest_longer(y)
+
+df6 <- tribble(
+  ~x, ~y,
+  "a", list(1, 2),
+  "b", list(3),
+  "c", list()
+)
+df6 |> unnest_longer(y)
+
+# --- 23.3.3 Inconsistent types ---
+df4 <- tribble(
+  ~x, ~y,
+  "a", list(1),
+  "b", list("a", TRUE, 5)
+)
+
+df4 |> unnest_longer(y)
+
+# --- 23.4.1 Very wide data (gh_repos) ---
+repos <- tibble(json = gh_repos)
+
+repos |> 
+  unnest_longer(json) |> 
+  unnest_wider(json) |> 
+  select(id, full_name, owner, description) |> 
+  unnest_wider(owner, names_sep = "_")
+
+# --- 23.4.2 Relational data (got_chars) ---
+chars <- tibble(json = got_chars)
+
+characters <- chars |> 
+  unnest_wider(json) |> 
+  select(id, name, gender, culture, born, died, alive)
+
+titles <- chars |> 
+  unnest_wider(json) |> 
+  select(id, titles) |> 
+  unnest_longer(titles) |> 
+  filter(titles != "") |> 
+  rename(title = titles)
+
+# --- 23.4.3 Deeply nested (gmaps_cities) ---
+locations <- gmaps_cities |> 
+  unnest_wider(json) |> 
+  select(-status) |> 
+  unnest_longer(results) |> 
+  unnest_wider(results)
+
+locations |> 
+  select(city, formatted_address, geometry) |> 
+  unnest_wider(geometry) |> 
+  unnest_wider(location)
+
+locations |> 
+  select(city, formatted_address, geometry) |> 
+  unnest_wider(geometry) |> 
+  select(!location:viewport) |> 
+  unnest_wider(bounds) |> 
+  rename(ne = northeast, sw = southwest) |> 
+  unnest_wider(c(ne, sw), names_sep = "_")
+
+# --- 23.4.3 Deeply nested (gmaps_cities) ---
+locations <- gmaps_cities |> 
+  unnest_wider(json) |> 
+  select(-status) |> 
+  unnest_longer(results) |> 
+  unnest_wider(results)
+
+locations |> 
+  select(city, formatted_address, geometry) |> 
+  unnest_wider(geometry) |> 
+  unnest_wider(location)
+
+locations |> 
+  select(city, formatted_address, geometry) |> 
+  unnest_wider(geometry) |> 
+  select(!location:viewport) |> 
+  unnest_wider(bounds) |> 
+  rename(ne = northeast, sw = southwest) |> 
+  unnest_wider(c(ne, sw), names_sep = "_")
+
+# --- 23.5.2 jsonlite parse_json() examples ---
+str(parse_json('1'))
+str(parse_json('[1, 2, 3]'))
+str(parse_json('{"x": [1, 2, 3]}'))
+
+# --- 23.5.3 Starting the rectangling process ---
+json <- '[
+  {"name": "John", "age": 34},
+  {"name": "Susan", "age": 27}
+]'
+df <- tibble(json = parse_json(json))
+df |> unnest_wider(json)
+
+json <- '{
+  "status": "OK", 
+  "results": [
+    {"name": "John", "age": 34},
+    {"name": "Susan", "age": 27}
+ ]
+}'
+df <- tibble(json = list(parse_json(json)))
+df |> 
+  unnest_wider(json) |> 
+  unnest_longer(results) |> 
+  unnest_wider(results)
+
+
+# CH.22 EXERCISES ---------------------------------------------------------
+
+# 1
+seattle_pq |>
+  group_by(CheckoutYear, Title) |>
+  summarise(TotalCheckouts = sum(Checkouts), .groups = "drop") |>
+  arrange(CheckoutYear, desc(TotalCheckouts)) |>
+  group_by(CheckoutYear) |>
+  slice_max(order_by = TotalCheckouts, n = 1) |>
+  collect()
+
+# 2
+seattle_pq |>
+  filter(!is.na(Creator), Creator != "") |>
+  group_by(Creator) |>
+  summarise(NumBooks = n_distinct(Title), .groups = "drop") |>
+  arrange(desc(NumBooks)) |>
+  slice(1) |>
+  collect()
+
+# 3
+seattle_pq |>
+  filter(CheckoutYear >= 2014, MaterialType %in% c("BOOK", "EBOOK")) |>
+  group_by(CheckoutYear, MaterialType) |>
+  summarise(TotalCheckouts = sum(Checkouts), .groups = "drop") |>
+  arrange(CheckoutYear, MaterialType) |>
+  collect()
+
+
+# CH.23 EXERCISES ---------------------------------------------------------
+
+
+# 3.3.5
+# 1
+df2 <- tribble(
+  ~x, ~y,
+  1, list(11, 12, 13),
+  2, list(21),
+  3, list(31, 32)
+)
+
+df2 |> unnest_wider(y, names_repair = "unique")
+
+# 2
+df1 <- tribble(
+  ~x, ~y,
+  1, list(a = 11, b = 12),
+  2, list(a = 21, b = 22),
+  3, list(a = 31, b = 32)
+)
+
+df1 |> unnest_longer(y, indices_include = TRUE)   # shows y_id
+df1 |> unnest_longer(y, indices_include = FALSE)  # hides y_id
+
+# 3
+df4 <- tribble(
+  ~x, ~y, ~z,
+  "a", list("y-a-1", "y-a-2"), list("z-a-1", "z-a-2"),
+  "b", list("y-b-1", "y-b-2", "y-b-3"), list("z-b-1", "z-b-2", "z-b-3")
+)
+
+df4 |> unnest_longer(y) |> unnest_longer(z)
+
+df4 |> unnest_longer(cols = c(y, z))
+
+
+# 23.5.4 EXERCISES --------------------------------------------------------
+
+# 1
+json_col <- parse_json('
+  {
+    "x": ["a", "x", "z"],
+    "y": [10, null, 3]
+  }
+')
+
+df_col <- tibble(json = list(json_col))
+
+df_col |> 
+  unnest_wider(json) |> 
+  unnest_longer(x) |> 
+  unnest_longer(y)
+
+json_col <- parse_json('
+  {
+    "x": ["a", "x", "z"],
+    "y": [10, null, 3]
+  }
+')
+
+df_col <- tibble(json = list(json_col))
+
+df_col |> 
+  unnest_wider(json) |> 
+  unnest_longer(x) |> 
+  unnest_longer(y)
+
+# EXTRA NOTE: I just wanted to mention that
+# I skipped Exercise 23.5.5 since it doesn’t appear in the
+# textbook—it seems like it might’ve been a typo, and we 
+# didn’t really discuss it in class either. Let me know
+# if there’s anything I should go back and review!
