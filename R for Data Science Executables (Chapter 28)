@@ -1,0 +1,285 @@
+---
+title: "RestOfCh28FINAL"
+author: "Favour Noya"
+format: docx
+editor: visual
+bibliography: references.bib
+---
+
+NOTE: Executables up to 28.4 were done in previous documents as PDF, Word, and HTML.
+
+28.5 Code Chunks and Inline Code
+
+{r}
+#| label: simple-addition
+1 + 1
+
+{r}
+#| label: simple-multiplication
+#| eval: false
+2 * 2
+
+{r}
+#| label: comma-function
+comma <- function(x) format(x, digits = 2, big.mark = ",")
+comma(3452345)
+comma(.12358124331)
+
+28.6 Figures
+
+{r}
+#| label: fig-diamond-plot
+#| fig-cap: "Figure showing frequency of diamonds under 2.5 carats."
+#| fig-width: 6
+#| fig-asp: 0.618
+#| out-width: "70%"
+#| fig-align: center
+
+library(ggplot2)
+library(dplyr)
+
+smaller <- ggplot2::diamonds %>%
+  filter(carat <= 2.5)
+
+ggplot(smaller, aes(x = carat)) + 
+  geom_freqpoly(binwidth = 0.01)
+
+As shown in @fig-diamond-plot, smaller diamonds are more common.
+
+{r}
+#| label: fig-wide
+#| fig-width: 10
+#| fig-height: 3
+
+ggplot(smaller, aes(x = carat)) + 
+  geom_freqpoly(binwidth = 0.01)
+
+{r}
+#| label: fig-out-width-100
+#| out-width: "100%"
+
+ggplot(smaller, aes(x = carat)) + 
+  geom_freqpoly(binwidth = 0.01)
+
+{r}
+#| label: fig-out-width-20
+#| out-width: "20%"
+
+ggplot(smaller, aes(x = carat)) + 
+  geom_freqpoly(binwidth = 0.01)
+
+28.7 Tables
+
+{r}
+#| label: tbl-mtcars-preview
+#| tbl-cap: "First 5 Rows of mtcars"
+knitr::kable(head(mtcars, 5))
+
+28.8 Caching
+
+{r}
+#| label: raw-data
+#| cache: true
+rawdata <- tibble::tibble(x = 1:5)
+
+{r}
+#| label: processed-data
+#| cache: true
+#| dependson: "raw-data"
+processed <- rawdata %>%
+  mutate(y = x^2)
+processed
+
+NOTE: 28.9 had no copy/paste executables
+
+28.10 YAML Parameters Example
+
+{r}
+#| label: parameter-example
+params <- list(my_class = "suv")
+print(params$my_class)
+
+28.3.1 Exercises
+
+Text Formatting
+
+italic bold strikeout codesuperscript2 subscript2underline small caps
+
+Headings
+
+1st Level Header
+
+2nd Level Header
+
+3rd Level Header
+
+Lists
+
+Bulleted list item 1
+
+Item 2
+
+Item 2a
+
+Item 2b
+
+Numbered list item 1
+
+Item 2. The numbers are incremented automatically in the output.
+
+Links and Images
+
+http://example.comlinked phrase
+
+Tables
+
+First Header
+
+Second Header
+
+Content Cell
+
+Content Cell
+
+Content Cell
+
+Content Cell
+
+{r}
+#| label: summary-mpg
+summary(mpg)
+
+Here is a sentence with a footnote.
+
+This is my block quote.
+
+Citation: [@wickham2019]
+
+28.4.1 Exercises
+
+Favour's CV
+
+Education
+
+2026: B.A. in Business Administration & Data Analytics, Augustana College
+
+Employment
+
+2024–Present: PACE Mentor, Augustana College
+
+2023: Intern, YouthHope Nonprofit
+
+Here is a sentence with a footnote.
+
+“Data tells the story that numbers can’t say out loud.”
+
+Diamond Plot Example
+
+{r}
+#| label: setup
+#| include: false
+
+library(tidyverse)
+
+smaller <- diamonds |> filter(carat <= 2.5)
+
+We have data about r nrow(diamonds) diamonds. Only r nrow(diamonds) - nrow(smaller) are larger than 2.5 carats. The distribution of the remainder is shown below.
+
+{r}
+#| label: fig-plot-diamonds
+#| echo: false
+
+smaller |> 
+  ggplot(aes(x = carat)) + 
+  geom_freqpoly(binwidth = 0.01)
+
+The plot shows that most diamonds are under 1 carat. As carat size increases, diamonds become rarer and less frequent in the dataset.
+
+A Copied Example containing Headers with a link:
+
+Data Analytics Club | Board Position Descriptions
+
+Thank you for your interest in joining the leadership team for the Data Analytics Club! Below are the open Board positions with a short description of each role.
+
+Management Team
+
+Vice President- Assists the President in managing club operations and initiatives, etc.
+
+28.5.5 Exercises
+
+{r}
+#| label: load-packages
+library(tidyverse)
+
+{r}
+#| label: cut-summary
+diamonds |> group_by(cut) |> summarize(avg_size = mean(carat))
+
+{r}
+#| label: color-summary
+diamonds |> group_by(color) |> summarize(avg_size = mean(carat))
+
+{r}
+#| label: clarity-summary
+diamonds |> group_by(clarity) |> summarize(avg_size = mean(carat))
+
+{r}
+#| label: setup-again
+#| include: false
+library(tidyverse)
+smaller <- diamonds |> filter(carat <= 2.5)
+
+We have data about r nrow(diamonds) diamonds. Only r nrow(diamonds) - nrow(smaller) are larger than 2.5 carats.
+
+{r}
+#| label: fig-diamonds-freq
+#| echo: false
+#| fig-cap: "Figure showing frequency of diamonds under 2.5 carats."
+
+ggplot(smaller, aes(x = carat)) + 
+  geom_freqpoly(binwidth = 0.01)
+
+{r}
+#| label: largest-diamonds
+top_20 <- diamonds |> 
+  arrange(desc(carat)) |> 
+  slice_head(n = 20)
+
+knitr::kable(top_20)
+
+{r}
+#| label: percent-large
+library(scales)
+total <- nrow(diamonds)
+large <- diamonds |> filter(carat > 2.5) |> nrow()
+percent_large <- large / total
+paste0("Only ", percent(percent_large), " of diamonds are larger than 2.5 carats.")
+
+28.6.3 Exercises
+
+My caption for a diamond that probably costs a pretty penny.
+
+As shown in @fig-diamonds-freq, smaller diamonds are more common.
+
+{r}
+#| label: fig-width-demo
+#| fig-width: 10
+#| fig-asp: 0.5
+
+ggplot(smaller, aes(x = carat)) + 
+  geom_freqpoly(binwidth = 0.01)
+
+{r}
+#| label: fig-out-width-100a
+#| out-width: "100%"
+
+ggplot(smaller, aes(x = carat)) + 
+  geom_freqpoly(binwidth = 0.01)
+
+{r}
+#| label: fig-out-width-20a
+#| out-width: "20%"
+
+ggplot(smaller, aes(x = carat)) + 
+  geom_freqpoly(binwidth = 0.01)
+
