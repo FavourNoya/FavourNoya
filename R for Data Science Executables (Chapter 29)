@@ -1,0 +1,134 @@
+
+# CHAPTER 29 EXECUTABLES --------------------------------------------------
+
+# Intro
+
+# You can switch the output format on the fly like this (super clutch for quick conversions)
+quarto::quarto_render("diamond-sizes.qmd", output_format = "docx")
+
+# Or render multiple formats at once — so you don’t have to keep re-running stuff
+quarto::quarto_render("diamond-sizes.qmd", output_format = c("docx", "pdf"))
+
+# 29.2 Output options
+
+# This one just runs everything listed in your YAML — one & done
+quarto::quarto_render("diamond-sizes.qmd", output_format = "all")
+
+# Example YAML for an HTML doc with a floating table of contents (aka cute and scrollable)
+# ---
+# format:
+#   html:
+#     toc: true
+#     toc_float: true
+# ---
+
+# If you wanna export to Word, PDF, and HTML all in one go, set it up like this:
+# ---
+# format:
+#   html:
+#     toc: true
+#     toc_float: true
+#   pdf: default
+#   docx: default
+# ---
+
+# 29.3 Documents
+
+# Hide all your code if the doc is for non-coders or just needs to look clean
+# ---
+# execute:
+#   echo: false
+# ---
+
+# Or keep it expandable (great for showing your work without overwhelming people)
+# ---
+# format:
+#   html:
+#     code: true
+# ---
+
+# 29.4 Presentations
+
+# You can turn your .qmd into slides with way less effort than building in Canva or PowerPoint
+# Just remember:
+# - One # makes a section title slide
+# - Two ## starts a new slide
+
+# revealjs = web slides | pptx = PowerPoint | beamer = PDF slides (LaTeX style)
+
+# 29.5.1 htmlwidgets
+
+# This chunk creates an interactive map — and yes, it really moves if you’re rendering to HTML
+library(leaflet)
+
+leaflet() |>
+  setView(174.764, -36.877, zoom = 16) |>
+  addTiles() |>
+  addMarkers(174.764, -36.877, popup = "Maungawhau")
+
+# 29.5.2 Shiny
+
+# This is where you bring R to life — your doc reacts to input using *your* R code
+
+library(shiny)
+
+# These inputs show up on the page — like actual user entry boxes
+textInput("name", "What is your name?")
+numericInput("age", "How old are you?", NA, min = 0, max = 150)
+
+# To make your doc a Shiny app, this is what you need up top:
+# ---
+# title: "Shiny Web App"
+# format: html
+# server: shiny
+# ---
+
+# Then this kinda code runs on the server-side (yep, it'll re-run live when input changes)
+# ```{r, context="server"}
+# paste("Hi", input$name, "- you are", input$age, "years young 😌")
+# ```
+
+# You can test it locally, but to put it online you’ll need a Shiny server (kinda like publishing a website)
+
+# 29.6 Websites and books
+
+# Website version:
+# ---
+# project:
+#   type: website
+# website:
+#   title: "A website on color scales"
+#   navbar:
+#     left:
+#       - href: index.qmd
+#         text: Home
+#       - href: viridis-colors.qmd
+#         text: Viridis colors
+#       - href: terrain-colors.qmd
+#         text: Terrain colors
+# ---
+
+# Book version (same vibe, different YAML setup):
+# ---
+# project:
+#   type: book
+# book:
+#   title: "A book on color scales"
+#   author: "Jane Coloriste"
+#   chapters:
+#     - index.qmd
+#     - intro.qmd
+#     - viridis-colors.qmd
+#     - terrain-colors.qmd
+# format:
+#   html:
+#     theme: cosmo
+#   pdf: default
+#   epub: default
+# ---
+
+# Once your YAML is set, hit Build in RStudio or just run:
+quarto::quarto_render()
+
+# NOTE 2 SELF: Other formats & templates for journals, blogs, and more so
+# your work looks cleaner can be found here: https://quarto.org/docs/output-formats/all-formats.html 
