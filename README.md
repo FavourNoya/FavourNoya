@@ -23,7 +23,8 @@ _______
 2. [Logistics Cost Efficiency Analysis](https://github.com/FavourNoya/logistics-cost-efficiency-analysis)
 - Data cleaning, transformation, and cost efficiency analysis of shipment logistics using R.
 
-
+3. [Employee Data Import and Transformation Using R](https://github.com/FavourNoya/employee-data-import-transform-r)
+- Imported, cleaned, transformed, and analyzed employee compensation data to evaluate tenure based compensation trends using R.
 _______
 **Experience**
 1. Marketing and Data Analytics Intern, EDGE Center
