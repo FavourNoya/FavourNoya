@@ -17,12 +17,9 @@ _______
 - Business and Operational Analytics
 _______
 **Featured Projects:**
-1. Program Data Impact Analysis
-- Analyzed program participation and operational data to identify trends and improve outreach effectiveness. Generated reports for stakeholders using Python and Excel and translated insights into actionable recommendations.
-2. Registration Workflow Optimization
-- Streamlined registration data processes serving more than 380 participants. Built structured data tracking and improved operational efficiency through data organization and analysis.
-3. Marketing and Outreach Data Insights
-- Evaluated engagement and program metrics to support strategic decisions and improve communication effectiveness using data driven storytelling.
+1. [Diamond Data Analysis Using R](https://github.com/YourUsername/diamond-data-analysis-r)
+- Explored distribution patterns and performed exploratory data analysis using R, tidyverse, and visualization techniques.
+
 _______
 **Experience**
 1. Marketing and Data Analytics Intern, EDGE Center
