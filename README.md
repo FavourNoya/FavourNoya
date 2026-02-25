@@ -17,7 +17,7 @@ _______
 - Business and Operational Analytics
 _______
 **Featured Projects:**
-1. [Diamond Data Analysis Using R](https://github.com/YourUsername/diamond-data-analysis-r)
+1. [Diamond Data Analysis Using R](https://github.com/FavourNoya/diamond-data-analysis-r)
 - Explored distribution patterns and performed exploratory data analysis using R, tidyverse, and visualization techniques.
 
 _______
