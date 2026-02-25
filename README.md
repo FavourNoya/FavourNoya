@@ -18,7 +18,7 @@ _______
 _______
 **Featured Projects:**
 1. [Diamond Data Analysis Using R](https://github.com/FavourNoya/diamond-data-analysis-r)
-- Explored distribution patterns and performed exploratory data analysis using R, tidyverse, and visualization techniques.
+- Explored fun distribution patterns and performed exploratory data analysis using R, tidyverse, and visualization techniques.
 
 2. [Logistics Cost Efficiency Analysis](https://github.com/FavourNoya/logistics-cost-efficiency-analysis)
 - Data cleaning, transformation, and cost efficiency analysis of shipment logistics using R.
